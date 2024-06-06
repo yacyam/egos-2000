@@ -14,7 +14,7 @@
 
 static int app_ino, app_pid;
 static void sys_spawn(uint base);
-static int app_spawn(struct proc_request *req);
+static int app_spawn(struct proc_request *req, int parent);
 
 int main() {
     SUCCESS("Enter kernel process GPID_PROCESS");    
@@ -42,20 +42,11 @@ int main() {
             /* Handling background processes */
             shell_waiting = (req->argv[req->argc - 1][0] != '&');
 
-            reply->type = app_spawn(req) < 0 ? CMD_ERROR : CMD_OK;
+            reply->type = app_spawn(req, sender) < 0 ? CMD_ERROR : CMD_OK;
             reply->pid = app_pid;
             if (!shell_waiting && reply->type == CMD_OK)
                 INFO("process %d running in the background", app_pid);
             grass->sys_send(GPID_SHELL, (void*)reply, sizeof(*reply));
-            break;
-        case PROC_EXIT:
-            grass->proc_free(sender);
-            reply->pid = sender;
-
-            if (shell_waiting && app_pid == sender)
-                grass->sys_send(GPID_SHELL, (void*)reply, sizeof(*reply));
-            else
-                INFO("background process %d terminated", sender);
             break;
         case PROC_KILLALL:
             grass->proc_free(GPID_ALL); break;
@@ -67,11 +58,18 @@ int main() {
 
 static int app_read(uint off, char* dst) { file_read(app_ino, off, dst); }
 
-static int app_spawn(struct proc_request *req) {
+static int app_spawn(struct proc_request *req, int parent) {
     int bin_ino = dir_lookup(0, "bin/");
     if ((app_ino = dir_lookup(bin_ino, req->argv[0])) < 0) return -1;
 
-    app_pid = grass->proc_alloc();
+    app_pid = grass->proc_alloc(parent);
+
+    if (app_pid < 0) {
+        grass->proc_free(GPID_ALL);
+        app_pid = grass->proc_alloc(parent);
+        if (app_pid < 0) FATAL("Reached Maximum Number of Processes");
+    } 
+
     int argc = req->argv[req->argc - 1][0] == '&'? req->argc - 1 : req->argc;
 
     elf_load(app_pid, app_read, argc, (void**)req->argv);
@@ -87,7 +85,7 @@ static int sys_proc_read(uint block_no, char* dst) {
 }
 
 static void sys_spawn(uint base) {
-    int pid = grass->proc_alloc();
+    int pid = grass->proc_alloc(GPID_PROCESS);
     INFO("Load kernel process #%d: %s", pid, sysproc_names[pid - 1]);
 
     sys_proc_base = base;

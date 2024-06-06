@@ -38,12 +38,13 @@ struct grass {
     char workdir[128];
 
     /* Process control interface */
-    int  (*proc_alloc)();
+    int  (*proc_alloc)(int parentid);
     void (*proc_free)(int pid);
     void (*proc_set_ready)(int pid);
 
     /* System call interface */
     void (*sys_exit)(int status);
+    int  (*sys_wait)(int pid);
     int  (*sys_send)(int pid, char* msg, uint size);
     int  (*sys_recv)(int pid, int* sender, char* buf, uint size);
 };

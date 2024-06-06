@@ -28,6 +28,7 @@ int main() {
     grass->proc_free = proc_free;
     grass->proc_set_ready = proc_set_ready;
 
+    grass->sys_wait = sys_wait;
     grass->sys_exit = sys_exit;
     grass->sys_send = sys_send;
     grass->sys_recv = sys_recv;
@@ -42,7 +43,7 @@ int main() {
     /* Load the first kernel process GPID_PROCESS */
     INFO("Load kernel process #%d: sys_proc", GPID_PROCESS);
     elf_load(GPID_PROCESS, sys_proc_read, 0, 0);
-    proc_set_running(proc_alloc());
+    proc_set_running(proc_alloc(0));
     earth->mmu_switch(GPID_PROCESS);
 
     /* Jump to the entry of process GPID_PROCESS */

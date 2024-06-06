@@ -39,7 +39,7 @@ void excp_entry(uint id) {
     /* Otherwise, kill the process if curr_pid is a user application */
 
     /* Student's code ends here. */
-    FATAL("excp_entry: kernel got exception %d", id);
+    FATAL("exc %d", id);
 }
 
 #define INTR_ID_SOFT       3
@@ -56,13 +56,6 @@ void intr_entry(uint id) {
     if (id == INTR_ID_TIMER && curr_pid < GPID_SHELL) {
         /* Do not interrupt kernel processes since IO can be stateful */
         earth->timer_reset();
-        return;
-    }
-
-    if (earth->tty_recv_intr() && curr_pid >= GPID_USER_START) {
-        /* User process killed by ctrl+c interrupt */
-        INFO("process %d killed by interrupt", curr_pid);
-        proc_set[proc_curr_idx].mepc = (uint)sys_exit;
         return;
     }
 
@@ -86,7 +79,7 @@ static void proc_yield() {
         }
     }
 
-    if (next_idx == -1) FATAL("proc_yield: no runnable process");
+    if (next_idx == -1) { FATAL("x"); }
     if (curr_status == PROC_RUNNING) proc_set_runnable(curr_pid);
 
     /* Switch to the next runnable process and reset timer */
@@ -150,6 +143,29 @@ static int proc_recv(struct syscall *sc, struct process *receiver) {
     return 0;
 }
 
+static int proc_wait(struct syscall *sc, struct process *proc) {
+    int childpid;
+    int child_killed = 0;
+
+    memcpy(&childpid, sc->msg.content, sizeof(childpid));
+
+    for (int i = 0; i < MAX_NPROCESS; i++)
+        if (proc_set[i].parent_id == proc->pid && proc_set[i].status == PROC_ZOMBIE) {
+            proc_free(proc_set[i].pid); // Free Children that are dead
+            if (proc_set[i].pid == childpid) child_killed++; 
+        }
+
+    return child_killed > 0 ? 0 : -1;
+}
+
+static void proc_exit(struct process *proc) {
+    proc_set_zombie(proc->pid);
+
+    for (int i = 0; i < MAX_NPROCESS; i++)
+        if (proc_set[i].parent_id == proc->pid) 
+            proc_set[i].parent_id = proc->parent_id; // Our Parent becomes Children's parents
+}
+
 static void proc_syscall(struct process *proc) {
     struct syscall *sc = (struct syscall*)SYSCALL_ARG;
     int rc;
@@ -162,9 +178,14 @@ static void proc_syscall(struct process *proc) {
         rc = proc_recv(sc, proc);
         break;
     case SYS_SEND:
-        proc->pending_syscall = PENDING_SEND;
         rc = proc_send(sc, proc);
         break;
+    case SYS_WAIT:
+        rc = proc_wait(sc, proc);
+        break;
+    case SYS_EXIT:
+        proc_exit(proc);
+        return;
     default:
         FATAL("proc_syscall: got unknown syscall type=%d", sc->type);
     }

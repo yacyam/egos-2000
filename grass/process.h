@@ -9,7 +9,8 @@ enum proc_status {
     PROC_READY,   /* finished loading elf and wait for first running */
     PROC_RUNNING,
     PROC_RUNNABLE,
-    PROC_PENDING
+    PROC_PENDING,
+    PROC_ZOMBIE
 };
 
 #define SAVED_REGISTER_NUM  29
@@ -18,6 +19,7 @@ enum proc_status {
 
 struct process{
     int pid;
+    int parent_id;
     enum proc_status status;
     uint mepc, saved_register[SAVED_REGISTER_NUM];
     enum {
@@ -37,9 +39,10 @@ void intr_entry(uint);
 void excp_entry(uint);
 void kernel_entry(uint, uint);
 
-int  proc_alloc();
+int  proc_alloc(int);
 void proc_free(int);
 void proc_set_ready (int);
 void proc_set_running (int);
 void proc_set_runnable (int);
 void proc_set_pending (int);
+void proc_set_zombie (int);
