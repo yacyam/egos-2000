@@ -9,6 +9,36 @@
 
 #include "sd.h"
 
+int send_byte(char byte) {
+    int is_full = REGW(SPI_BASE, SPI_TXDATA) & (1 << 31);
+    if (is_full) return -1;
+
+    if (earth->platform == ARTY)
+        REGB(SPI_BASE, SPI_TXDATA) = byte;
+    else /* QEMU */
+        REGW(SPI_BASE, SPI_TXDATA) = byte;
+
+    return 0;
+}
+
+int recv_byte(char *dst) {
+    uint rxdata = REGW(SPI_BASE, SPI_RXDATA);
+
+    int is_empty = rxdata & (1 << 31);
+    if (is_empty) return -1;
+
+    *dst = (char)rxdata & 0xFF;
+    return 0;
+}
+
+
+/* * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * */
+
 char send_data_byte(char byte) {
     while (REGW(SPI_BASE, SPI_TXDATA) & (1 << 31));
     if (earth->platform == ARTY)

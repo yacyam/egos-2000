@@ -12,8 +12,8 @@
 
 
 #include "egos.h"
-#include "process.h"
 #include "syscall.h"
+#include "process.h"
 #include <string.h>
 
 void kernel_entry(uint is_interrupt, uint id) {
@@ -79,7 +79,7 @@ static void proc_yield() {
         }
     }
 
-    if (next_idx == -1) { FATAL("x"); }
+    if (next_idx == -1) { FATAL("proc_yield: no runnable processes"); }
     if (curr_status == PROC_RUNNING) proc_set_runnable(curr_pid);
 
     /* Switch to the next runnable process and reset timer */
@@ -113,7 +113,7 @@ static int proc_send(struct syscall *sc, struct process *sender) {
         struct process dst = proc_set[i];
         if (dst.pid == sc->msg.receiver) {
             /* Destination is not receiving, or will not take msg from sender */
-            if (! (dst.status == PROC_PENDING && dst.pending_syscall == PENDING_RECV) ) return -1;
+            if (! (dst.status == PROC_PENDING && dst.pending_syscall == SYS_RECV) ) return -1;
             if (! (dst.receive_from == GPID_ALL || dst.receive_from == sender->pid) ) return -1;
             
             pending_ipc_buffer->in_use = 1;
@@ -129,41 +129,40 @@ static int proc_send(struct syscall *sc, struct process *sender) {
 }
 
 static int proc_recv(struct syscall *sc, struct process *receiver) {
+    receiver->receive_from = sc->msg.sender;
+    
     /* No Message Available, or not for Current Process */
-    if (pending_ipc_buffer->in_use == 0 || pending_ipc_buffer->receiver != receiver->pid) {
-        receiver->receive_from = sc->msg.sender;
+    if (pending_ipc_buffer->in_use == 0 || pending_ipc_buffer->receiver != receiver->pid) 
         return -1; 
-    }
-
-    pending_ipc_buffer->in_use = 0;
 
     memcpy(sc->msg.content, pending_ipc_buffer->msg, sizeof(sc->msg.content));
     sc->msg.sender = pending_ipc_buffer->sender;
 
+    pending_ipc_buffer->in_use = 0;
     return 0;
 }
 
 static int proc_wait(struct syscall *sc, struct process *proc) {
-    int childpid;
-    int child_killed = 0;
+    int *child_pid;
+    memcpy(&child_pid, sc->msg.content, sizeof(child_pid));
 
-    memcpy(&childpid, sc->msg.content, sizeof(childpid));
-
-    for (int i = 0; i < MAX_NPROCESS; i++)
-        if (proc_set[i].parent_id == proc->pid && proc_set[i].status == PROC_ZOMBIE) {
-            proc_free(proc_set[i].pid); // Free Children that are dead
-            if (proc_set[i].pid == childpid) child_killed++; 
+    for (int i = 0; i < MAX_NPROCESS; i++) {
+        if (proc_set[i].parent_pid == proc->pid && proc_set[i].status == PROC_ZOMBIE) {
+            *child_pid = proc_set[i].pid;
+            proc_free(proc_set[i].pid);
+            return 0;    
         }
+    }
 
-    return child_killed > 0 ? 0 : -1;
+    return -1;
 }
 
 static void proc_exit(struct process *proc) {
     proc_set_zombie(proc->pid);
 
     for (int i = 0; i < MAX_NPROCESS; i++)
-        if (proc_set[i].parent_id == proc->pid) 
-            proc_set[i].parent_id = proc->parent_id; // Our Parent becomes Children's parents
+        if (proc_set[i].parent_pid == proc->pid) 
+            proc_set[i].parent_pid = proc->parent_pid; // Our Parent becomes Children's parents
 }
 
 static void proc_syscall(struct process *proc) {
@@ -174,7 +173,6 @@ static void proc_syscall(struct process *proc) {
 
     switch (sc->type) {
     case SYS_RECV:
-        proc->pending_syscall = PENDING_RECV;
         rc = proc_recv(sc, proc);
         break;
     case SYS_SEND:
@@ -192,6 +190,7 @@ static void proc_syscall(struct process *proc) {
 
     if (rc == -1) {
         proc_set_pending(proc->pid); // Failure, Retry Request
+        proc->pending_syscall = sc->type;
     } else {
         proc_set_runnable(proc->pid); // Success or Error, Move to User Space
         sc->type = SYS_UNUSED;

@@ -46,8 +46,8 @@ void sys_exit(int status) {
     sys_invoke();
 }
 
-int sys_wait(int childpid) {
-    memcpy(sc->msg.content, &childpid, sizeof(childpid));
+int sys_wait(int *child_pid) {
+    memcpy(sc->msg.content, &child_pid, sizeof(child_pid));
     sc->type = SYS_WAIT;
     sys_invoke();
     return sc->retval;

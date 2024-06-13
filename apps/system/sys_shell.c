@@ -48,9 +48,15 @@ int main() {
 
                 if (reply.type != CMD_OK)
                     INFO("sys_shell: command causes an error");
-                else if (req.argv[req.argc - 1][0] != '&') {
+                else if (req.argv[req.argc - 1][0] == '&')
+                    INFO("process %d running in the background", reply.pid);
+                else {
                     /* Wait for foreground command to terminate */
-                    grass->sys_wait(reply.pid);
+                    int child_pid, foreground_pid = reply.pid;
+                    do {
+                        grass->sys_wait(&child_pid);
+                        if (child_pid != foreground_pid) INFO("background process %d terminated", child_pid);
+                    } while (child_pid != foreground_pid);
                 }
             }
         }

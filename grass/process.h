@@ -19,13 +19,10 @@ enum proc_status {
 
 struct process{
     int pid;
-    int parent_id;
+    int parent_pid;
     enum proc_status status;
     uint mepc, saved_register[SAVED_REGISTER_NUM];
-    enum {
-        PENDING_SEND,
-        PENDING_RECV
-    } pending_syscall;
+    enum syscall_type pending_syscall;
     int receive_from;
 };
 

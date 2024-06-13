@@ -9,6 +9,13 @@
 
 #include "egos.h"
 
+#define PLIC_BASE 0x0C000000
+#define PLIC_PRIORITY 0x0
+#define PLIC_ENABLES 0x2000
+#define PLIC_THRESHOLD 0x200000
+#define PLIC_CLAIM 0x200004
+#define PLIC_SPI2_ID 6
+
 /* These are two static variables storing
  * the addresses of the handler functions;
  * Initially, both variables are NULL */
@@ -39,10 +46,10 @@ void intr_init() {
         INFO("Use direct mode and put the address of trap_entry_M_mode() to mtvec");
     }
 
-    /* Enable the machine-mode timer and software interrupts */
+    /* Enable the machine-mode timer, software, and external interrupts */
     uint mstatus, mie;
     asm("csrr %0, mie" : "=r"(mie));
-    asm("csrw mie, %0" ::"r"(mie | 0x88));
+    asm("csrw mie, %0" ::"r"(mie | 0x888));
     asm("csrr %0, mstatus" : "=r"(mstatus));
-    asm("csrw mstatus, %0" ::"r"(mstatus | 0x88));
+    asm("csrw mstatus, %0" ::"r"(mstatus | 0x80));
 }

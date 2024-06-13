@@ -10,6 +10,9 @@ enum sd_type {
 };
 extern enum sd_type SD_CARD_TYPE;
 
+int send_byte(char);
+int recv_byte(char *);
+
 char recv_data_byte();
 char send_data_byte(char);
 

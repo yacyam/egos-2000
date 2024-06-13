@@ -12,22 +12,35 @@
 
 static void single_read(uint offset, char* dst) {
     if (SD_CARD_TYPE == SD_TYPE_SD2) offset = offset * BLOCK_SIZE;
-
-    /* Wait until SD card is not busy */
-    while (recv_data_byte() != 0xFF);
     
     /* Send read request with cmd17 */
     char *arg = (void*)&offset;
     char reply, cmd17[] = {0x51, arg[3], arg[2], arg[1], arg[0], 0xFF};
 
-    if (reply = sd_exec_cmd(cmd17))
-        FATAL("SD card replies cmd17 with status 0x%.2x", reply);
+    for (int i = 0; i < 6; i++) while (send_byte(cmd17[i]) < 0); // Send Command
+    for (int i = 0; i < 6; i++) while (recv_byte(&reply) < 0); // Read Busy Response on MISO Line
 
-    /* Wait for the data packet and ignore the 2-byte checksum */
-    while (recv_data_byte() != 0xFE);
-    for (uint i = 0; i < BLOCK_SIZE; i++) dst[i] = recv_data_byte();
-    recv_data_byte();
-    recv_data_byte();
+    do {
+        while (send_byte(0xFF) < 0); 
+        while (recv_byte(&reply) < 0);
+    } while (reply == 0xFF); // Cmd Reply
+
+    if (reply != 0) FATAL("SD card replies cmd17 with status 0x%.2x", reply);
+
+    do {
+        while (send_byte(0xFF) < 0); 
+        while (recv_byte(&reply) < 0);
+    } while (reply != 0xFE); // Start Token
+
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        while (send_byte(0xFF) < 0); // Send for Block
+        while (recv_byte(&dst[i]) < 0); // Receive for Byte of Block
+    }
+
+    while(send_byte(0xFF) < 0);
+    while(send_byte(0xFF) < 0);
+    while (recv_byte(&reply) < 0);
+    while (recv_byte(&reply) < 0); // Two Byte Checksum
 }
 
 static void single_write(uint offset, char* src) {

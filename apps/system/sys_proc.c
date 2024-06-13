@@ -44,8 +44,6 @@ int main() {
 
             reply->type = app_spawn(req, sender) < 0 ? CMD_ERROR : CMD_OK;
             reply->pid = app_pid;
-            if (!shell_waiting && reply->type == CMD_OK)
-                INFO("process %d running in the background", app_pid);
             grass->sys_send(GPID_SHELL, (void*)reply, sizeof(*reply));
             break;
         case PROC_KILLALL:
