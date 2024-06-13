@@ -17,10 +17,7 @@ static void sys_spawn(uint base);
 static int app_spawn(struct proc_request *req, int parent);
 
 int main() {
-    SUCCESS("Enter kernel process GPID_PROCESS");    
-
-    REGW(SPI_BASE, 72UL) = 0xFF;
-    while (1);    
+    SUCCESS("Enter kernel process GPID_PROCESS");      
 
     int sender, shell_waiting;
     char buf[SYSCALL_MSG_LEN];
@@ -82,7 +79,7 @@ static int sys_proc_base;
 char* sysproc_names[] = {"sys_proc", "sys_file", "sys_dir", "sys_shell"};
 
 static int sys_proc_read(uint block_no, char* dst) {
-    return earth->disk_read(sys_proc_base + block_no, 1, dst);
+    return grass->sys_disk_read(sys_proc_base + block_no, 1, dst);
 }
 
 static void sys_spawn(uint base) {

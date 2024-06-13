@@ -43,7 +43,8 @@ static void earth_init() {
 }
 
 static int grass_read(uint block_no, char* dst) {
-    return earth->disk_read(GRASS_EXEC_START + block_no, 1, dst);
+    earth->disk_read_kernel(GRASS_EXEC_START + block_no, 1, dst);
+    return 0;
 }
 
 int main() {

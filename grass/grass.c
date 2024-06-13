@@ -17,7 +17,8 @@ struct grass *grass = (void*)APPS_STACK_TOP;
 struct earth *earth = (void*)GRASS_STACK_TOP;
 
 static int sys_proc_read(uint block_no, char* dst) {
-    return earth->disk_read(SYS_PROC_EXEC_START + block_no, 1, dst);
+    earth->disk_read_kernel(SYS_PROC_EXEC_START + block_no, 1, dst);
+    return 0;
 }
 
 int main() {
@@ -32,6 +33,7 @@ int main() {
     grass->sys_exit = sys_exit;
     grass->sys_send = sys_send;
     grass->sys_recv = sys_recv;
+    grass->sys_disk_read = sys_disk_read;
 
     /* Register the kernel entry */
     earth->kernel_entry_init(kernel_entry);

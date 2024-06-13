@@ -48,6 +48,7 @@ void excp_entry(uint id) {
 
 static void proc_yield();
 static void proc_syscall(struct process *proc);
+static void proc_external();
 
 uint proc_curr_idx;
 struct process proc_set[MAX_NPROCESS];
@@ -60,12 +61,14 @@ void intr_entry(uint id) {
         return;
     }
 
-    CRITICAL("id %d", id);
-
     /* Ignore other interrupts for now */
     if (id == INTR_ID_SOFT) proc_syscall(&proc_set[proc_curr_idx]);
-    if (id == INTR_ID_EXTR) FATAL("hi");
+    if (id == INTR_ID_EXTR) proc_external();
     proc_yield();
+}
+
+static void proc_external() {
+    earth->trap_external();
 }
 
 static void proc_yield() {
@@ -169,6 +172,22 @@ static void proc_exit(struct process *proc) {
             proc_set[i].parent_pid = proc->parent_pid; // Our Parent becomes Children's parents
 }
 
+static int proc_disk_read(struct syscall *sc) {
+    void *msg = (void *)sc->msg.content;
+    
+    uint block_no, nblocks;
+    char *dst;
+
+    memcpy(&block_no, msg, sizeof(block_no));
+    msg += sizeof(block_no);
+    memcpy(&nblocks, msg, sizeof(nblocks));
+    msg += sizeof(nblocks);
+    memcpy(&dst, msg, sizeof(dst));
+
+    earth->disk_read(block_no, nblocks, dst);
+    return 0;
+}
+
 static void proc_syscall(struct process *proc) {
     struct syscall *sc = (struct syscall*)SYSCALL_ARG;
     int rc;
@@ -188,6 +207,9 @@ static void proc_syscall(struct process *proc) {
     case SYS_EXIT:
         proc_exit(proc);
         return;
+    case DISK_READ:
+        rc = proc_disk_read(sc);
+        break;
     default:
         FATAL("proc_syscall: got unknown syscall type=%d", sc->type);
     }

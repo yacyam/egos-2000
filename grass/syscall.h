@@ -8,6 +8,7 @@ enum syscall_type {
 	SYS_SEND,
     SYS_EXIT,
     SYS_WAIT,
+    DISK_READ,
 	SYS_NCALLS
 };
 
@@ -37,3 +38,4 @@ void sys_exit(int status);
 int  sys_wait(int *pid);
 int  sys_send(int pid, char* msg, uint size);
 int  sys_recv(int pid, int* sender, char* buf, uint size);
+int  sys_disk_read(uint block_no, uint nblocks, char* dst);

@@ -19,6 +19,27 @@ enum disk_type {
 };
 static enum disk_type type;
 
+struct disk_read_cmd {
+    enum {
+        DISK_IDLE,
+        DISK_RUNNING,
+        DISK_FINISHED
+    } state;
+    block_t data;
+    block_no block;
+};
+
+static struct disk_read_cmd read_cmd;
+
+void disk_read_kernel(uint block_no, uint nblocks, char* dst) {
+    if (type == SD_CARD) {
+        sdread(block_no, nblocks, dst);
+    } else {
+        char* src = (char*)0x20800000 + block_no * BLOCK_SIZE;
+        memcpy(dst, src, nblocks * BLOCK_SIZE);
+    }
+}
+
 int disk_read(uint block_no, uint nblocks, char* dst) {
     if (type == SD_CARD) {
         sdread(block_no, nblocks, dst);
@@ -40,6 +61,7 @@ int disk_write(uint block_no, uint nblocks, char* src) {
 void disk_init() {
     earth->disk_read = disk_read;
     earth->disk_write = disk_write;
+    earth->disk_read_kernel = disk_read_kernel;
 
     if (earth->platform == QEMU_SIFIVE) {
         /* SiFive QEMU v5 does not support SD card emulation */

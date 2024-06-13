@@ -41,6 +41,21 @@ int sys_recv(int from, int* sender, char* buf, uint size) {
     return sc->retval;
 }
 
+int sys_disk_read(uint block_no, uint nblocks, char* dst) {
+    void *msg = (void *)sc->msg.content;
+
+    memcpy(msg, &block_no, sizeof(block_no));
+    msg += sizeof(block_no);
+    memcpy(msg, &nblocks, sizeof(nblocks));
+    msg += sizeof(nblocks);
+    memcpy(msg, &dst, sizeof(dst));
+
+    sc->type = DISK_READ;
+    sys_invoke();
+
+    return sc->retval;
+}
+
 void sys_exit(int status) {
     sc->type = SYS_EXIT;
     sys_invoke();

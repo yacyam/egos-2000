@@ -7,6 +7,7 @@ struct earth {
     /* CPU interface */
     int (*timer_reset)();
     int (*kernel_entry_init)(void (*entry)(uint, uint));
+    int (*trap_external)();
 
     int (*mmu_alloc)(uint* frame_no, void** cached_addr);
     int (*mmu_free)(int pid);
@@ -14,8 +15,9 @@ struct earth {
     int (*mmu_switch)(int pid);
 
     /* Devices interface */
-    int (*disk_read)(uint block_no, uint nblocks, char* dst);
-    int (*disk_write)(uint block_no, uint nblocks, char* src);
+    int  (*disk_read)(uint block_no, uint nblocks, char* dst);
+    int  (*disk_write)(uint block_no, uint nblocks, char* src);
+    void (*disk_read_kernel)(uint block_no, uint nblocks, char* dst);
 
     int (*tty_recv_intr)();
     int (*tty_read)(char* buf, uint len);
@@ -47,6 +49,7 @@ struct grass {
     int  (*sys_wait)(int *pid);
     int  (*sys_send)(int pid, char* msg, uint size);
     int  (*sys_recv)(int pid, int* sender, char* buf, uint size);
+    int  (*sys_disk_read)(uint block_no, uint nblocks, char* dst);
 };
 
 extern struct earth *earth;

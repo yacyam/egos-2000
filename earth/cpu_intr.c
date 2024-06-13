@@ -36,6 +36,19 @@ void trap_entry() {
     kernel_entry(mcause & (1 << 31), mcause & 0x3FF);
 }
 
+int trap_external() {
+    int cause = REGW(PLIC_BASE, PLIC_CLAIM);
+
+    if (cause == PLIC_UART_ID) {
+        CRITICAL("trap_ext: UART unimplemented");
+    } else if (cause == PLIC_SPI_ID) {
+        CRITICAL("trap_ext: SPI unimplemented");
+    }
+ 
+    REGW(PLIC_BASE, PLIC_CLAIM) = cause;
+    return 0;
+}
+
 void extr_enable(uint id) {
     REGW(PLIC_BASE, PLIC_PRIORITY + (4 * id))  |= 1;
     REGW(PLIC_BASE, PLIC_ENABLES) |= (1 << id);
@@ -43,6 +56,7 @@ void extr_enable(uint id) {
 
 void intr_init() {
     earth->kernel_entry_init = kernel_entry_init;
+    earth->trap_external = trap_external;
 
     /* Setup the interrupt/exception entry function */
     if (earth->translation == PAGE_TABLE) {

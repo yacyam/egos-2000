@@ -31,7 +31,6 @@ int recv_byte(char *dst) {
     return 0;
 }
 
-
 /* * * * * * * * * * * * * * * * * */
 /* * * * * * * * * * * * * * * * * */
 /* * * * * * * * * * * * * * * * * */
@@ -74,6 +73,10 @@ char sd_exec_acmd(char* cmd) {
 static void spi_set_clock(long baud_rate) {
     long div = (CPU_CLOCK_RATE / (2 * baud_rate)) - 1;
     REGW(SPI_BASE, SPI_SCKDIV) = (div & 0xFFF);
+}
+
+void spi_intr() {
+    CRITICAL("handled");
 }
 
 enum sd_type SD_CARD_TYPE = SD_TYPE_UNKNOWN;
