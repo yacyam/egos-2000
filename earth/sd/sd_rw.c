@@ -17,6 +17,11 @@ static void single_read(uint offset, char* dst) {
     char *arg = (void*)&offset;
     char reply, cmd17[] = {0x51, arg[3], arg[2], arg[1], arg[0], 0xFF};
 
+    do {
+        send_byte(0xFF);
+        recv_byte(&reply);
+    } while (reply != 0xFF); // Wait Until SD Card is not Busy
+
     for (int i = 0; i < 6; i++) while (send_byte(cmd17[i]) < 0); // Send Command
     for (int i = 0; i < 6; i++) while (recv_byte(&reply) < 0); // Read Busy Response on MISO Line
 
@@ -26,7 +31,7 @@ static void single_read(uint offset, char* dst) {
     } while (reply == 0xFF); // Cmd Reply
 
     if (reply != 0) FATAL("SD card replies cmd17 with status 0x%.2x", reply);
-
+    
     do {
         while (send_byte(0xFF) < 0); 
         while (recv_byte(&reply) < 0);

@@ -19,6 +19,9 @@ static int app_spawn(struct proc_request *req, int parent);
 int main() {
     SUCCESS("Enter kernel process GPID_PROCESS");    
 
+    REGW(SPI_BASE, 72UL) = 0xFF;
+    while (1);    
+
     int sender, shell_waiting;
     char buf[SYSCALL_MSG_LEN];
 

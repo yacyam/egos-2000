@@ -44,6 +44,7 @@ void excp_entry(uint id) {
 
 #define INTR_ID_SOFT       3
 #define INTR_ID_TIMER      7
+#define INTR_ID_EXTR       11
 
 static void proc_yield();
 static void proc_syscall(struct process *proc);
@@ -59,8 +60,11 @@ void intr_entry(uint id) {
         return;
     }
 
+    CRITICAL("id %d", id);
+
     /* Ignore other interrupts for now */
     if (id == INTR_ID_SOFT) proc_syscall(&proc_set[proc_curr_idx]);
+    if (id == INTR_ID_EXTR) FATAL("hi");
     proc_yield();
 }
 

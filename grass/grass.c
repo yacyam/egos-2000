@@ -43,10 +43,11 @@ int main() {
     /* Load the first kernel process GPID_PROCESS */
     INFO("Load kernel process #%d: sys_proc", GPID_PROCESS);
     elf_load(GPID_PROCESS, sys_proc_read, 0, 0);
-    proc_set_running(proc_alloc(0));
+    proc_set_running(proc_alloc(GPID_UNUSED));
     earth->mmu_switch(GPID_PROCESS);
 
     /* Jump to the entry of process GPID_PROCESS */
-    asm("mv a0, %0" ::"r"(APPS_ARG));
-    asm("jr %0" :: "r" (APPS_ENTRY));
+    asm("mv a0, %0" ::"r" (APPS_ARG));
+    asm("csrw mepc, %0" ::"r"(APPS_ENTRY));
+    asm("mret");
 }

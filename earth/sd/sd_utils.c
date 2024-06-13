@@ -85,6 +85,10 @@ void sdinit() {
     REGW(SPI_BASE, SPI_CSDEF) = 0;
     REGW(SPI_BASE, SPI_FCTRL) = 0;
 
+    /* Enable SPI Interrupts */
+    REGW(SPI_BASE, SPI_IE) = 2; // Only Enable Rx Interrupts
+    REGW(SPI_BASE, SPI_RXMARK) = 0; // Set Watermark for Rx to 0
+
     INFO("Set CS and MOSI to 1 and toggle clock.");
     uint i, rxdata;
     for (i = 0; i < 1000; i++) send_data_byte(0xFF);

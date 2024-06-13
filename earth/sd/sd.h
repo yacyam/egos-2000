@@ -35,4 +35,7 @@ int sdwrite(uint offset, uint nblock, char* src);
 #define SPI_FMT      64UL
 #define SPI_TXDATA   72UL
 #define SPI_RXDATA   76UL
+#define SPI_RXMARK   84UL
 #define SPI_FCTRL    96UL
+#define SPI_IE       112UL
+#define SPI_IP       116UL

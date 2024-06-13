@@ -9,12 +9,14 @@
 
 #include "egos.h"
 
-#define PLIC_BASE 0x0C000000
-#define PLIC_PRIORITY 0x0
-#define PLIC_ENABLES 0x2000
-#define PLIC_THRESHOLD 0x200000
-#define PLIC_CLAIM 0x200004
-#define PLIC_SPI2_ID 6
+#define PLIC_BASE      0x0C000000
+#define PLIC_PRIORITY  0x0
+#define PLIC_ENABLES   (earth->platform == ARTY ? 0x2000 : 0x2080)
+#define PLIC_THRESHOLD (earth->platform == ARTY ? 0x200000 : 0x201000)
+#define PLIC_CLAIM     (earth->platform == ARTY ? 0x200004 : 0x201004) // ARTY still programmed with FE Chip, 1 core.
+
+#define PLIC_UART_ID   (earth->platform == ARTY ? 3 : 4)
+#define PLIC_SPI_ID    6 
 
 /* These are two static variables storing
  * the addresses of the handler functions;
@@ -32,6 +34,11 @@ void trap_entry() {
     uint mcause;
     asm("csrr %0, mcause" : "=r"(mcause));
     kernel_entry(mcause & (1 << 31), mcause & 0x3FF);
+}
+
+void extr_enable(uint id) {
+    REGW(PLIC_BASE, PLIC_PRIORITY + (4 * id))  |= 1;
+    REGW(PLIC_BASE, PLIC_ENABLES) |= (1 << id);
 }
 
 void intr_init() {
@@ -52,4 +59,9 @@ void intr_init() {
     asm("csrw mie, %0" ::"r"(mie | 0x888));
     asm("csrr %0, mstatus" : "=r"(mstatus));
     asm("csrw mstatus, %0" ::"r"(mstatus | 0x80));
+
+    /* Enable Interrupts on PLIC for UART and SPI */
+    REGW(PLIC_BASE, PLIC_THRESHOLD) = 0;
+    extr_enable(PLIC_UART_ID);
+    extr_enable(PLIC_SPI_ID);
 }
