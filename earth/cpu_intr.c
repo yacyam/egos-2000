@@ -18,6 +18,8 @@
 #define PLIC_UART_ID   (earth->platform == ARTY ? 3 : 4)
 #define PLIC_SPI_ID    6 
 
+int disk_intr();
+
 /* These are two static variables storing
  * the addresses of the handler functions;
  * Initially, both variables are NULL */
@@ -37,16 +39,19 @@ void trap_entry() {
 }
 
 int trap_external() {
+    INFO("enter trap");
     int cause = REGW(PLIC_BASE, PLIC_CLAIM);
+    int rc;
 
     if (cause == PLIC_UART_ID) {
-        CRITICAL("trap_ext: UART unimplemented");
+        FATAL("trap_ext: UART unimplemented");
     } else if (cause == PLIC_SPI_ID) {
-        CRITICAL("trap_ext: SPI unimplemented");
+        rc = disk_intr();
     }
  
     REGW(PLIC_BASE, PLIC_CLAIM) = cause;
-    return 0;
+    INFO("exit trap");
+    return rc;
 }
 
 void extr_enable(uint id) {

@@ -25,11 +25,18 @@ struct disk_read_cmd {
         DISK_RUNNING,
         DISK_FINISHED
     } state;
+    block_no block_no;
     block_t data;
-    block_no block;
 };
 
 static struct disk_read_cmd read_cmd;
+
+int disk_intr() {
+    if (sd_spi_intr(read_cmd.data.bytes) == 0)
+        read_cmd.state = DISK_FINISHED;
+    
+    return 0;
+}
 
 void disk_read_kernel(uint block_no, uint nblocks, char* dst) {
     if (type == SD_CARD) {
@@ -41,13 +48,26 @@ void disk_read_kernel(uint block_no, uint nblocks, char* dst) {
 }
 
 int disk_read(uint block_no, uint nblocks, char* dst) {
-    if (type == SD_CARD) {
-        sdread(block_no, nblocks, dst);
-    } else {
+    if (type == FLASH_ROM) {
         char* src = (char*)0x20800000 + block_no * BLOCK_SIZE;
         memcpy(dst, src, nblocks * BLOCK_SIZE);
+        return 0;
+    } 
+
+    if (read_cmd.state == DISK_IDLE && sd_send_cmd(block_no) == 0) {
+        SUCCESS("disk_read: read block %d", block_no);
+        read_cmd.block_no = block_no;
+        read_cmd.state == DISK_RUNNING;
     }
-    return 0;
+    
+    if (read_cmd.state == DISK_FINISHED && block_no == read_cmd.block_no) {
+        SUCCESS("disk_read: finished block %d", block_no);
+        memcpy(dst, read_cmd.data.bytes, BLOCK_SIZE);
+        read_cmd.state = DISK_IDLE;
+        return 0;
+    }
+
+    return -1;
 }
 
 int disk_write(uint block_no, uint nblocks, char* src) {
@@ -62,6 +82,8 @@ void disk_init() {
     earth->disk_read = disk_read;
     earth->disk_write = disk_write;
     earth->disk_read_kernel = disk_read_kernel;
+
+    read_cmd.state = DISK_IDLE;
 
     if (earth->platform == QEMU_SIFIVE) {
         /* SiFive QEMU v5 does not support SD card emulation */

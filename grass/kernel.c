@@ -71,22 +71,39 @@ static void proc_external() {
     earth->trap_external();
 }
 
+static void proc_wfi() {
+    uint mie;
+    asm("csrr %0, mie":"=r"(mie));
+
+    asm("csrw mie, %0" ::"r"(mie & ~(0x80))); // Turn off timer interrupts
+    INFO("enter wfi");
+    asm("wfi");
+    INFO("exit wfi");
+    asm("csrw mie, %0" ::"r"(mie | 0x80)); // Turn on timer interrupts
+
+    proc_external();
+}
+
 static void proc_yield() {
     /* Find the next runnable process */
     int next_idx = -1;
-    for (uint i = 1; i <= MAX_NPROCESS; i++) {
-        struct process *p = &proc_set[(proc_curr_idx + i) % MAX_NPROCESS];
-        if (p->status == PROC_PENDING) {
-            earth->mmu_switch(p->pid);
-            proc_syscall(p); // Run pending system call to possibly make process runnable
+    while (next_idx == -1) {
+        for (uint i = 1; i <= MAX_NPROCESS; i++) {
+            struct process *p = &proc_set[(proc_curr_idx + i) % MAX_NPROCESS];
+            if (p->status == PROC_PENDING) {
+                earth->mmu_switch(p->pid);
+                proc_syscall(p); // Run pending system call to possibly make process runnable
+            }
+            if (p->status == PROC_READY || p->status == PROC_RUNNING || p->status == PROC_RUNNABLE) {
+                next_idx = (proc_curr_idx + i) % MAX_NPROCESS;
+                break;
+            }
         }
-        if (p->status == PROC_READY || p->status == PROC_RUNNING || p->status == PROC_RUNNABLE) {
-            next_idx = (proc_curr_idx + i) % MAX_NPROCESS;
-            break;
-        }
+
+        if (next_idx == -1) 
+            proc_wfi();
     }
 
-    if (next_idx == -1) { FATAL("proc_yield: no runnable processes"); }
     if (curr_status == PROC_RUNNING) proc_set_runnable(curr_pid);
 
     /* Switch to the next runnable process and reset timer */
@@ -174,7 +191,7 @@ static void proc_exit(struct process *proc) {
 
 static int proc_disk_read(struct syscall *sc) {
     void *msg = (void *)sc->msg.content;
-    
+
     uint block_no, nblocks;
     char *dst;
 
@@ -184,8 +201,7 @@ static int proc_disk_read(struct syscall *sc) {
     msg += sizeof(nblocks);
     memcpy(&dst, msg, sizeof(dst));
 
-    earth->disk_read(block_no, nblocks, dst);
-    return 0;
+    return earth->disk_read(block_no, nblocks, dst);
 }
 
 static void proc_syscall(struct process *proc) {
