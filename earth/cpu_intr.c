@@ -39,7 +39,6 @@ void trap_entry() {
 }
 
 int trap_external() {
-    INFO("enter trap");
     int cause = REGW(PLIC_BASE, PLIC_CLAIM);
     int rc;
 
@@ -50,7 +49,6 @@ int trap_external() {
     }
  
     REGW(PLIC_BASE, PLIC_CLAIM) = cause;
-    INFO("exit trap");
     return rc;
 }
 

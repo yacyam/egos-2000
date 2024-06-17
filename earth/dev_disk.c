@@ -21,9 +21,9 @@ static enum disk_type type;
 
 struct disk_read_cmd {
     enum {
-        DISK_IDLE,
-        DISK_RUNNING,
-        DISK_FINISHED
+        DISK_IDLE,    /* Waiting for Command */
+        DISK_RUNNING, /* Executing Command */
+        DISK_FINISHED /* Waiting for User to Read Block */
     } state;
     block_no block_no;
     block_t data;
@@ -55,13 +55,11 @@ int disk_read(uint block_no, uint nblocks, char* dst) {
     } 
 
     if (read_cmd.state == DISK_IDLE && sd_send_cmd(block_no) == 0) {
-        SUCCESS("disk_read: read block %d", block_no);
         read_cmd.block_no = block_no;
         read_cmd.state == DISK_RUNNING;
     }
     
     if (read_cmd.state == DISK_FINISHED && block_no == read_cmd.block_no) {
-        SUCCESS("disk_read: finished block %d", block_no);
         memcpy(dst, read_cmd.data.bytes, BLOCK_SIZE);
         read_cmd.state = DISK_IDLE;
         return 0;

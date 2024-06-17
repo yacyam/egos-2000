@@ -19,9 +19,10 @@ struct sd sd_card;
 
 int sd_send_cmd(uint block_no) {
     if (SD_CARD_TYPE == SD_TYPE_SD2) block_no = block_no * BLOCK_SIZE;
-    CRITICAL("sd_send_cmd: block %d, pend %d", block_no, REGW(SPI_BASE, SPI_IP));
+
+    /* If Busy, Induce SD Clock until SD Card ready to take another CMD */
     if (sd_card.state == SD_BUSY) send_byte(0xFF);
-    if (sd_card.state != SD_READY) return -1; // Let Interrupt Handler Clear Out Rx
+    if (sd_card.state != SD_READY) return -1; // Let Interrupt Handler Clear Out Rx into Buffer
 
     sd_card.num_read = 0; // Reset CMD Window
 
@@ -29,14 +30,13 @@ int sd_send_cmd(uint block_no) {
     char cmd17[] = {0x51, arg[3], arg[2], arg[1], arg[0], 0xFF};
 
     for (int i = 0; i < 6; i++) send_byte(cmd17[i]); 
-    CRITICAL("sd_send_cmd: sent block");
+
     sd_card.num_written = 6;
     sd_card.state = SD_WAIT_RESPONSE;
     return 0;
 }
 
 int sd_read_block(char *dst) {
-    INFO("sd_read_block: addr %x", dst);
     int i = 0;
 
     while (sd_card.num_read < sd_card.num_written) {
@@ -47,25 +47,25 @@ int sd_read_block(char *dst) {
 
     for (; i < BLOCK_SIZE; i++) dst[i] = busy_recv_byte();
     
-    
+    /* Two Byte Checksum */
     busy_recv_byte();
     busy_recv_byte();
     sd_card.state = SD_BUSY;
-    CRITICAL("sd_read_block: finished block");
     return 0;
 }
 
 int sd_spi_intr(char *dst) {
     char reply;
-    INFO("sd_spi_intr: state %d", sd_card.state);
+
+    /* SD Card may be busy flushing internal buffers, 0xFF indicates SD Ready again */
     if (sd_card.state == SD_BUSY || sd_card.state == SD_READY) {
-        while (recv_byte(&reply) == 0) sd_card.state = reply == 0xFF ? SD_READY : SD_BUSY;
+        while (recv_byte(&reply) == 0) sd_card.state = (reply == 0xFF) ? SD_READY : SD_BUSY;
         return -1;
     }
-    if (recv_byte(&reply) < 0) return -1; // Nothing in Rx, Spurious Interrupt
+
+    if (recv_byte(&reply) < 0) return -1; // Spurious Interrupt
 
     do {
-        CRITICAL("sd_spi_intr: recv byte %x, state %d", reply, sd_card.state);
         sd_card.num_read++;
         if (reply == 0xFF) continue;
 
@@ -79,17 +79,15 @@ int sd_spi_intr(char *dst) {
         }
     } while (recv_byte(&reply) == 0);
 
-    CRITICAL("sd_spi_intr: state %d, n_read %d, n_written %d", sd_card.state, sd_card.num_read, sd_card.num_written);
-
     if (sd_card.state == SD_READ_BLOCK)
         return sd_read_block(dst);
     else {
-        while ( sd_card.num_written < sd_card.num_read + SPI_QUEUE_SIZE &&
+        /* Drive SD Clock to induce another Rx Interrupt with Block Data */
+        while ( sd_card.num_written < sd_card.num_read + SPI_QUEUE_SIZE && // Writes above QUEUE_SIZE read are lost
                 send_byte(0xFF) == 0 ) { 
             sd_card.num_written++;
         }
-        CRITICAL("sd_spi_intr: Not Read, n_read %d, n_written %d", sd_card.num_read, sd_card.num_written);
-        if (sd_card.num_written > 50) FATAL("hang");
+        if (sd_card.num_read == 8000) FATAL("sd_spi_intr: sd card not responding");
         return -1;
     }
 }

@@ -76,9 +76,7 @@ static void proc_wfi() {
     asm("csrr %0, mie":"=r"(mie));
 
     asm("csrw mie, %0" ::"r"(mie & ~(0x80))); // Turn off timer interrupts
-    INFO("enter wfi");
     asm("wfi");
-    INFO("exit wfi");
     asm("csrw mie, %0" ::"r"(mie | 0x80)); // Turn on timer interrupts
 
     proc_external();
@@ -186,7 +184,7 @@ static void proc_exit(struct process *proc) {
 
     for (int i = 0; i < MAX_NPROCESS; i++)
         if (proc_set[i].parent_pid == proc->pid) 
-            proc_set[i].parent_pid = proc->parent_pid; // Our Parent becomes Children's parents
+            proc_set[i].parent_pid = proc->parent_pid; // Our Parent becomes Children's parent
 }
 
 static int proc_disk_read(struct syscall *sc) {
