@@ -32,7 +32,8 @@ struct disk_read_cmd {
 static struct disk_read_cmd read_cmd;
 
 int disk_intr() {
-    if (sd_spi_intr(read_cmd.data.bytes) == 0)
+    /* SD Card Read Out Block into Buffer */
+    if (sd_spi_intr(read_cmd.data.bytes) == 0 && read_cmd.state == DISK_RUNNING)
         read_cmd.state = DISK_FINISHED;
     
     return 0;
@@ -53,13 +54,15 @@ int disk_read(uint block_no, uint nblocks, char* dst) {
         memcpy(dst, src, nblocks * BLOCK_SIZE);
         return 0;
     } 
-
+    CRITICAL("TRYING TO SEND: %x, STATE: %d", block_no, read_cmd.state);
     if (read_cmd.state == DISK_IDLE && sd_send_cmd(block_no) == 0) {
+        SUCCESS("SENT");
         read_cmd.block_no = block_no;
-        read_cmd.state == DISK_RUNNING;
+        read_cmd.state = DISK_RUNNING;
     }
     
     if (read_cmd.state == DISK_FINISHED && block_no == read_cmd.block_no) {
+        SUCCESS("READ");
         memcpy(dst, read_cmd.data.bytes, BLOCK_SIZE);
         read_cmd.state = DISK_IDLE;
         return 0;

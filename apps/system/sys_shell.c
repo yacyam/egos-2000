@@ -45,6 +45,7 @@ int main() {
             } else {
                 grass->sys_send(GPID_PROCESS, (void*)&req, sizeof(req));
                 grass->sys_recv(GPID_PROCESS, NULL, (void*)&reply, sizeof(reply));
+                INFO("SHELL RECV");
 
                 if (reply.type != CMD_OK)
                     INFO("sys_shell: command causes an error");
@@ -54,6 +55,7 @@ int main() {
                     /* Wait for foreground command to terminate */
                     int child_pid, foreground_pid = reply.pid;
                     do {
+                        INFO("WAIT");
                         grass->sys_wait(&child_pid);
                         if (child_pid != foreground_pid) INFO("background process %d terminated", child_pid);
                     } while (child_pid != foreground_pid);

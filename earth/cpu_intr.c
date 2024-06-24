@@ -9,7 +9,6 @@
 
 #include "egos.h"
 
-#define PLIC_BASE      0x0C000000
 #define PLIC_PRIORITY  0x0
 #define PLIC_ENABLES   (earth->platform == ARTY ? 0x2000 : 0x2080)
 #define PLIC_THRESHOLD (earth->platform == ARTY ? 0x200000 : 0x201000)

@@ -187,19 +187,22 @@ static void proc_exit(struct process *proc) {
             proc_set[i].parent_pid = proc->parent_pid; // Our Parent becomes Children's parent
 }
 
-static int proc_disk_read(struct syscall *sc) {
+static int proc_disk(struct syscall *sc) {
     void *msg = (void *)sc->msg.content;
 
     uint block_no, nblocks;
-    char *dst;
+    char *buf;
 
     memcpy(&block_no, msg, sizeof(block_no));
     msg += sizeof(block_no);
     memcpy(&nblocks, msg, sizeof(nblocks));
     msg += sizeof(nblocks);
-    memcpy(&dst, msg, sizeof(dst));
+    memcpy(&buf, msg, sizeof(buf));
 
-    return earth->disk_read(block_no, nblocks, dst);
+    if (sc->type == DISK_READ)
+        return earth->disk_read(block_no, nblocks, buf);
+
+    return earth->disk_write(block_no, nblocks, buf);
 }
 
 static void proc_syscall(struct process *proc) {
@@ -221,8 +224,8 @@ static void proc_syscall(struct process *proc) {
     case SYS_EXIT:
         proc_exit(proc);
         return;
-    case DISK_READ:
-        rc = proc_disk_read(sc);
+    case DISK_READ: case DISK_WRITE:
+        rc = proc_disk(sc);
         break;
     default:
         FATAL("proc_syscall: got unknown syscall type=%d", sc->type);

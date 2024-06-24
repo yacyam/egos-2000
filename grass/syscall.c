@@ -41,16 +41,16 @@ int sys_recv(int from, int* sender, char* buf, uint size) {
     return sc->retval;
 }
 
-int sys_disk_read(uint block_no, uint nblocks, char* dst) {
+int sys_disk(uint block_no, uint nblocks, char* buf, int rw) {
     void *msg = (void *)sc->msg.content;
 
     memcpy(msg, &block_no, sizeof(block_no));
     msg += sizeof(block_no);
     memcpy(msg, &nblocks, sizeof(nblocks));
     msg += sizeof(nblocks);
-    memcpy(msg, &dst, sizeof(dst));
+    memcpy(msg, &buf, sizeof(buf));
 
-    sc->type = DISK_READ;
+    sc->type = (rw == 0) ? DISK_READ : DISK_WRITE;
     sys_invoke();
 
     return sc->retval;

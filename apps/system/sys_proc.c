@@ -17,10 +17,18 @@ static void sys_spawn(uint base);
 static int app_spawn(struct proc_request *req, int parent);
 
 int main() {
-    SUCCESS("Enter kernel process GPID_PROCESS");      
+    SUCCESS("Enter kernel process GPID_PROCESS");
 
     int sender, shell_waiting;
     char buf[SYSCALL_MSG_LEN];
+
+    buf[0] = 'y';
+    // grass->sys_disk(0x08, 1, buf, 1);
+    grass->sys_disk(0x08, 1, buf, 0);
+
+    SUCCESS("CHAR %c", buf[0]);
+
+    while(1);
 
     sys_spawn(SYS_FILE_EXEC_START);
     grass->sys_recv(GPID_FILE, NULL, buf, SYSCALL_MSG_LEN);
@@ -44,7 +52,7 @@ int main() {
 
             reply->type = app_spawn(req, sender) < 0 ? CMD_ERROR : CMD_OK;
             reply->pid = app_pid;
-            grass->sys_send(GPID_SHELL, (void*)reply, sizeof(*reply));
+            grass->sys_send(sender, (void*)reply, sizeof(*reply));
             break;
         case PROC_KILLALL:
             grass->proc_free(GPID_ALL); break;
@@ -71,6 +79,7 @@ static int app_spawn(struct proc_request *req, int parent) {
     int argc = req->argv[req->argc - 1][0] == '&'? req->argc - 1 : req->argc;
 
     elf_load(app_pid, app_read, argc, (void**)req->argv);
+    SUCCESS("SPAWNED");
     grass->proc_set_ready(app_pid);
     return 0;
 }
@@ -79,7 +88,7 @@ static int sys_proc_base;
 char* sysproc_names[] = {"sys_proc", "sys_file", "sys_dir", "sys_shell"};
 
 static int sys_proc_read(uint block_no, char* dst) {
-    return grass->sys_disk_read(sys_proc_base + block_no, 1, dst);
+    return grass->sys_disk(sys_proc_base + block_no, 1, dst, 0);
 }
 
 static void sys_spawn(uint base) {

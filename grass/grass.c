@@ -33,7 +33,7 @@ int main() {
     grass->sys_exit = sys_exit;
     grass->sys_send = sys_send;
     grass->sys_recv = sys_recv;
-    grass->sys_disk_read = sys_disk_read;
+    grass->sys_disk = sys_disk;
 
     /* Register the kernel entry */
     earth->kernel_entry_init(kernel_entry);

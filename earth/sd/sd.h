@@ -2,12 +2,20 @@
 
 #include "egos.h"
 
-enum sd_state {
+static enum sd_state {
       SD_READY,
       SD_WAIT_RESPONSE,
       SD_WAIT_START,
-      SD_READ_BLOCK,
-      SD_BUSY
+      SD_READ_BLOCK
+};
+
+static struct sd {
+    enum {
+      SD_READ,
+      SD_WRITE
+    } exec;
+    enum sd_state state;
+    uint num_read, num_written;
 };
 
 int send_byte(char);
@@ -27,7 +35,8 @@ enum sd_type {
 extern enum sd_type SD_CARD_TYPE;
 
 char busy_recv_byte();
-char busy_send_byte(char);
+char busy_exch_byte(char);
+void busy_send_byte(char);
 
 char sd_exec_cmd(char*);
 char sd_exec_acmd(char*);

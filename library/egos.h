@@ -49,7 +49,7 @@ struct grass {
     int  (*sys_wait)(int *pid);
     int  (*sys_send)(int pid, char* msg, uint size);
     int  (*sys_recv)(int pid, int* sender, char* buf, uint size);
-    int  (*sys_disk_read)(uint block_no, uint nblocks, char* dst);
+    int  (*sys_disk)(uint block_no, uint nblocks, char* dst, int rw);
 };
 
 extern struct earth *earth;
@@ -86,6 +86,7 @@ extern struct grass *grass;
 #define MSIP       (earth->platform == ARTY? 0x2000000UL : 0x2000004UL)
 #define SPI_BASE   (earth->platform == ARTY? 0x10024000UL : 0x10050000UL)
 #define UART0_BASE (earth->platform == QEMU_LATEST? 0x10010000UL : 0x10013000UL)
+#define PLIC_BASE  0x0C000000
 
 /* Memory-mapped I/O register access macros */
 #define ACCESS(x) (*(__typeof__(*x) volatile *)(x))
