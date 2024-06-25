@@ -31,8 +31,38 @@ int recv_byte(char *dst) {
     return 0;
 }
 
-void sd_update_state(struct sd *sd, char reply) {
-    asm("nop");
+void sd_update_read(struct sd *sd, char reply) {
+    switch (sd->rdstate) {
+    case SD_RD_WAIT_RESPONSE:
+        if (reply == 0) sd->rdstate = SD_RD_WAIT_START;
+        else FATAL("SD card replies cmd17 with status 0x%.2x", reply);
+        break;
+    case SD_RD_WAIT_START:
+        if (reply == START_TOKEN) sd->rdstate = SD_RD_READ_BLOCK;
+        break;
+    }
+}
+
+void sd_update_write(struct sd *sd, char reply) {
+    switch (sd->wrstate) {
+    case SD_WR_WAIT_RESPONSE_1:
+        if (reply == 0) sd->wrstate = SD_WR_WRITE_BLOCK;
+        else FATAL("SD card replies cmd24 with status 0x%.2x", reply);
+        break;
+    case SD_WR_WAIT_RESPONSE_2:
+        if (reply == 0x05) sd->wrstate = SD_WR_READY;
+        else FATAL("SD card write ack with status 0x%.2x", reply);
+        break;
+    }
+}
+
+void sd_update_waiting(struct sd *sd, char reply) {
+    if (reply == DUMMY_BYTE) return; /* Busy Waiting Response, Do not update state */
+
+    if (sd->exec == SD_CMD_READ)
+        sd_update_read(sd, reply);
+    if (sd->exec == SD_CMD_WRITE)
+        sd_update_write(sd, reply);
 }
 
 /* * * * * * * * * * * * * * * * * */

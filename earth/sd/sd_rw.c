@@ -12,18 +12,32 @@
 
 struct sd sd_card;
 
-int sd_send_cmd(uint block_no) {
+void sd_send_cmd(uint block_no, enum sd_cmd rw) {
     if (SD_CARD_TYPE == SD_TYPE_SD2) block_no = block_no * BLOCK_SIZE;
-    if (sd_card.state != SD_READY) return -1;
 
     char *arg = (char *)&block_no;
-    char cmd17[] = {0x51, arg[3], arg[2], arg[1], arg[0], 0xFF};
+    char cmd[] = {
+        (rw == SD_CMD_READ) ? 0x51 : 0x58, 
+        arg[3], arg[2], arg[1], arg[0], 
+        DUMMY_BYTE
+    };
 
-    for (int i = 0; i < 6; i++) send_byte(cmd17[i]); 
+    for (int i = 0; i < CMD_LEN; i++) send_byte(cmd[i]); 
+}
+
+int sd_start_cmd(uint block_no, enum sd_cmd cmd) {
+    /* Can only send 1 CMD at a time */
+    if (sd_card.rdstate != SD_RD_READY || sd_card.wrstate != SD_WR_READY) return -1;
+    
+    sd_card.exec = cmd;
+    sd_send_cmd(block_no, cmd);
 
     sd_card.num_read = 0;
-    sd_card.num_written = 6;
-    sd_card.state = SD_WAIT_RESPONSE;
+    sd_card.num_written = CMD_LEN;
+
+    /* Update CMD-Specific State, Interrupts will drive executing SD Card CMD */
+    if (cmd == SD_CMD_READ)  sd_card.rdstate = SD_RD_WAIT_RESPONSE;
+    if (cmd == SD_CMD_WRITE) sd_card.wrstate = SD_WR_WAIT_RESPONSE_1;
     return 0;
 }
 
@@ -35,47 +49,48 @@ void sd_read_block(char *dst) {
         sd_card.num_read++;
     }
 
-    for (; i < BLOCK_SIZE; i++) dst[i] = busy_exch_byte(0xFF);
+    for (; i < BLOCK_SIZE; i++) dst[i] = busy_exch_byte(DUMMY_BYTE);
     
     /* Two Byte Checksum */
-    busy_exch_byte(0xFF);
-    busy_exch_byte(0xFF);
+    busy_exch_byte(DUMMY_BYTE);
+    busy_exch_byte(DUMMY_BYTE);
+}
+
+void sd_write_block(char *src) {
+    while (sd_card.num_read < sd_card.num_written) {
+        busy_recv_byte();
+        sd_card.num_read++;
+    }
+
+    /* Send Start Token + Block */
+    busy_exch_byte(START_TOKEN);
+    for (int i = 0; i < BLOCK_SIZE; i++) busy_exch_byte(src[i]);
 }
 
 int sd_spi_intr(char *dst) {
     char reply;
     if (recv_byte(&reply) < 0) return -1; // Spurious Interrupt
+    if (sd_card.rdstate == SD_RD_READY && sd_card.wrstate == SD_WR_READY) return -1; // No CMD is running
 
     do {
         sd_card.num_read++;
-        if (reply == 0xFF) continue; // Busy Signal
+        sd_update_waiting(&sd_card, reply);
 
-        if (sd_card.state == SD_WAIT_RESPONSE && reply == 0) {
-            sd_card.state = SD_WAIT_START;
-        } 
-        else if (sd_card.state == SD_WAIT_START && reply == 0xFE) {
-            sd_card.state = SD_READ_BLOCK;
-            break;
-        } 
-        else {
-            FATAL("SD card replies cmd17 with status 0x%.2x", reply);
+        if (sd_card.rdstate == SD_RD_READ_BLOCK) { 
+            sd_read_block(dst);
+            while (busy_exch_byte(DUMMY_BYTE) != DUMMY_BYTE); // Wait until SD Card is no longer busy
+            sd_card.rdstate = SD_RD_READY;
+            return 0;
         }
     } while (recv_byte(&reply) == 0);
 
-    if (sd_card.state == SD_READ_BLOCK) {
-        sd_read_block(dst);
-        while (busy_exch_byte(0xFF) != 0xFF); // Wait until SD Card is no longer busy
-        sd_card.state = SD_READY;
-        return 0;
-    } else if (sd_card.state == SD_WAIT_RESPONSE || sd_card.state == SD_WAIT_START) {
-        /* Drive SD Clock to induce another Rx Interrupt with Block Data */
-        while ( 
-            sd_card.num_written < sd_card.num_read + SPI_QUEUE_SIZE &&
-            send_byte(0xFF) == 0 ) { 
-            sd_card.num_written++;
-        }
-        if (sd_card.num_read == 8000) FATAL("sd_spi_intr: sd card not responding");
+    /* Drive SD Clock to induce another Rx Interrupt with Non-Busy Response */
+    while ( 
+        sd_card.num_written < sd_card.num_read + SPI_QUEUE_SIZE &&
+        send_byte(DUMMY_BYTE) == 0 ) { 
+        sd_card.num_written++;
     }
+    if (sd_card.num_read == 8000) FATAL("sd_spi_intr: sd card not responding");
     return -1;
 }
 
@@ -119,34 +134,25 @@ static void single_write(uint offset, char* src) {
     while (recv_byte(&reply) == 0);   // Read Out Remaining Chars
     while (busy_exch_byte(0xFF) != 0xFF);
 
-    for (int i = 0; i < 6; i++) { 
-        CRITICAL("out, %x, %x", cmd24[i], busy_exch_byte(cmd24[i]));
-    } // Send Command
+    for (int i = 0; i < 6; i++) busy_exch_byte(cmd24[i]);// Send Command
 
     while ((reply = busy_exch_byte(0xFF)) == 0xFF); // Cmd Reply
 
-    if (reply) FATAL("SD card replies cmd24 with status %.2x", reply);
+    if (reply) 
+        FATAL("SD card replies cmd24 with status %.2x", reply);
 
-    SUCCESS("send packet");
+    busy_exch_byte(0xFF); /* At Least 1 Byte buffer before sending Block */
 
     /* Send data packet: token + block + dummy 2-byte checksum */
-    CRITICAL("first: %x", busy_exch_byte(0xFE));
-    for (uint i = 0; i < BLOCK_SIZE; i++) {
-        if ((reply = busy_exch_byte(src[i])) != 0xFF) INFO("diff: %x", reply);
-    }
-
-    SUCCESS("sent");
+    busy_exch_byte(0xFE);
+    for (uint i = 0; i < BLOCK_SIZE; i++) busy_exch_byte(src[i]);
 
     /* Wait for SD card ack of data packet */
     while ((reply = busy_exch_byte(0xFF)) == 0xFF);
     if ((reply & 0x1F) != 0x05)
        FATAL("SD card write ack with status 0x%.2x", reply);
 
-    SUCCESS("past");
-
     while (busy_exch_byte(0xFF) != 0xFF); // Wait Until SD Card is not Busy
-
-    CRITICAL("done");
 }
 
 int sdread(uint offset, uint nblock, char* dst) {

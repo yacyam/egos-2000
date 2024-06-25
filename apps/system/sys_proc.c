@@ -23,7 +23,7 @@ int main() {
     char buf[SYSCALL_MSG_LEN];
 
     buf[0] = 'y';
-    // grass->sys_disk(0x08, 1, buf, 1);
+    grass->sys_disk(0x08, 1, buf, 1);
     grass->sys_disk(0x08, 1, buf, 0);
 
     SUCCESS("CHAR %c", buf[0]);

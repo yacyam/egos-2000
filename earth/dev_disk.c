@@ -55,7 +55,7 @@ int disk_read(uint block_no, uint nblocks, char* dst) {
         return 0;
     } 
     CRITICAL("TRYING TO SEND: %x, STATE: %d", block_no, read_cmd.state);
-    if (read_cmd.state == DISK_IDLE && sd_send_cmd(block_no) == 0) {
+    if (read_cmd.state == DISK_IDLE && sd_start_cmd(block_no, SD_CMD_READ) == 0) {
         SUCCESS("SENT");
         read_cmd.block_no = block_no;
         read_cmd.state = DISK_RUNNING;
