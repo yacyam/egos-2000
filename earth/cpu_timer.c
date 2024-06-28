@@ -36,8 +36,22 @@ static int mtimecmp_set(ulonglong time) {
 static uint QUANTUM;
 int timer_reset() { return mtimecmp_set(mtime_get() + QUANTUM); }
 
+void timer_disable() {
+    uint mie;
+    asm("csrr %0, mie":"=r"(mie));
+    asm("csrw mie, %0"::"r"(mie & ~(0x80)));
+}
+
+void timer_enable() {
+    uint mie;
+    asm("csrr %0, mie":"=r"(mie));
+    asm("csrw mie, %0"::"r"(mie | (0x80)));
+}
+
 void timer_init()  {
     earth->timer_reset = timer_reset;
+    earth->timer_enable = timer_enable;
+    earth->timer_disable = timer_disable;
     QUANTUM = (earth->platform == ARTY)? 5000 : 500000;
     mtimecmp_set(0x0FFFFFFFFFFFFFFFUL);
 }

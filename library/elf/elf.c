@@ -41,28 +41,34 @@ static void load_app(int pid, elf_reader reader,
     void* base;
     uint frame_no, block_offset = pheader->p_offset / BLOCK_SIZE;
     uint code_start = APPS_ENTRY >> 12, stack_start = APPS_ARG >> 12;
-
+    SUCCESS("ABOUT");
     /* Setup the text, rodata, data and bss sections */
     for (uint off = 0; off < pheader->p_filesz; off += BLOCK_SIZE) {
         if (off % PAGE_SIZE == 0) {
-            earth->mmu_alloc(&frame_no, &base);
+            if (off > 0) earth->mmu_unpin(pid, frame_no);
+            earth->mmu_alloc(pid, &frame_no, &base);
             earth->mmu_map(pid, code_start++, frame_no);
+            earth->mmu_pin(pid, frame_no);
+            SUCCESS("PINNED");
         }
         reader(block_offset++, (char*)base + (off % PAGE_SIZE));
     }
     uint last_page_filled = pheader->p_filesz % PAGE_SIZE;
     uint last_page_nzeros = PAGE_SIZE - last_page_filled;
-    if (last_page_filled)
+    if (last_page_filled) {
         memset((char*)base + last_page_filled, 0, last_page_nzeros);
+        earth->mmu_unpin(pid, frame_no);
+    }
+    
 
     while (code_start < ((APPS_ENTRY + APPS_SIZE) >> 12)) {
-        earth->mmu_alloc(&frame_no, &base);
+        earth->mmu_alloc(pid, &frame_no, &base);
         earth->mmu_map(pid, code_start++, frame_no);
         memset((char*)base, 0, PAGE_SIZE);
     }
 
     /* Setup two pages for argc, argv and stack */
-    earth->mmu_alloc(&frame_no, &base);
+    earth->mmu_alloc(pid, &frame_no, &base);
     earth->mmu_map(pid, stack_start++, frame_no);
 
     int* argc_addr = (int*)base;
@@ -74,7 +80,8 @@ static void load_app(int pid, elf_reader reader,
     for (uint i = 0; i < argc; i++)
         argv_addr[i] = APPS_ARG + 4 + 4 * CMD_NARGS + i * CMD_ARG_LEN;
 
-    earth->mmu_alloc(&frame_no, &base);
+    earth->mmu_alloc(pid, &frame_no, &base);
+    SUCCESS("DONE");
     earth->mmu_map(pid, stack_start++, frame_no);
 }
 

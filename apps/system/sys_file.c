@@ -13,7 +13,7 @@
 #include <string.h>
 
 int main() {
-    SUCCESS("Enter kernel process GPID_FILE");
+    // SUCCESS("Enter kernel process GPID_FILE");
 
     /* Initialize the file system interface */
     inode_intf fs = treedisk_init(fs_disk_init(), 0);

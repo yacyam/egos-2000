@@ -23,12 +23,10 @@ int main() {
     char buf[SYSCALL_MSG_LEN];
 
     buf[0] = 'y';
-    grass->sys_disk(0x08, 1, buf, 1);
-    grass->sys_disk(0x08, 1, buf, 0);
+    // grass->sys_disk(0x08, 1, buf, IO_WRITE);
+    // grass->sys_disk(0x08, 1, buf, IO_READ);
 
     SUCCESS("CHAR %c", buf[0]);
-
-    while(1);
 
     sys_spawn(SYS_FILE_EXEC_START);
     grass->sys_recv(GPID_FILE, NULL, buf, SYSCALL_MSG_LEN);
@@ -70,16 +68,11 @@ static int app_spawn(struct proc_request *req, int parent) {
 
     app_pid = grass->proc_alloc(parent);
 
-    if (app_pid < 0) {
-        grass->proc_free(GPID_ALL);
-        app_pid = grass->proc_alloc(parent);
-        if (app_pid < 0) FATAL("Reached Maximum Number of Processes");
-    } 
+    if (app_pid < 0) FATAL("Reached Maximum Number of Processes");
 
     int argc = req->argv[req->argc - 1][0] == '&'? req->argc - 1 : req->argc;
 
     elf_load(app_pid, app_read, argc, (void**)req->argv);
-    SUCCESS("SPAWNED");
     grass->proc_set_ready(app_pid);
     return 0;
 }
@@ -88,7 +81,7 @@ static int sys_proc_base;
 char* sysproc_names[] = {"sys_proc", "sys_file", "sys_dir", "sys_shell"};
 
 static int sys_proc_read(uint block_no, char* dst) {
-    return grass->sys_disk(sys_proc_base + block_no, 1, dst, 0);
+    grass->sys_disk(sys_proc_base + block_no, 1, dst, IO_READ);
 }
 
 static void sys_spawn(uint base) {

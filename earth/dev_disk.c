@@ -21,9 +21,9 @@ static enum disk_type type;
 
 struct disk_read_cmd {
     enum {
-        DISK_IDLE,    /* Waiting for Command */
-        DISK_RUNNING, /* Executing Command */
-        DISK_FINISHED /* Waiting for User to Read Block */
+        DISK_IDLE,     /* Waiting for Command */
+        DISK_RUNNING,  /* Executing Command */
+        DISK_FINISHED, /* Waiting for User to Read Block */
     } state;
     block_no block_no;
     block_t data;
@@ -33,19 +33,37 @@ static struct disk_read_cmd read_cmd;
 
 int disk_intr() {
     /* SD Card Read Out Block into Buffer */
-    if (sd_spi_intr(read_cmd.data.bytes) == 0 && read_cmd.state == DISK_RUNNING)
+    if (sd_spi_intr(read_cmd.data.bytes) == 0 && read_cmd.state == DISK_RUNNING) {
         read_cmd.state = DISK_FINISHED;
+        return 0;
+    }
     
-    return 0;
+    return -1;
+}
+
+void disk_flush_kernel() {
+    if (read_cmd.state == DISK_RUNNING) {
+        while (disk_intr() != 0);
+        read_cmd.state = DISK_FINISHED;
+    }
 }
 
 void disk_read_kernel(uint block_no, uint nblocks, char* dst) {
     if (type == SD_CARD) {
+        disk_flush_kernel();
         sdread(block_no, nblocks, dst);
     } else {
         char* src = (char*)0x20800000 + block_no * BLOCK_SIZE;
         memcpy(dst, src, nblocks * BLOCK_SIZE);
     }
+}
+
+void disk_write_kernel(uint block_no, uint nblocks, char* src) {
+    if (type == FLASH_ROM)
+        FATAL("disk_write: Writing to the read-only ROM");
+
+    disk_flush_kernel();
+    sdwrite(block_no, nblocks, src);
 }
 
 int disk_read(uint block_no, uint nblocks, char* dst) {
@@ -54,15 +72,13 @@ int disk_read(uint block_no, uint nblocks, char* dst) {
         memcpy(dst, src, nblocks * BLOCK_SIZE);
         return 0;
     } 
-    CRITICAL("TRYING TO SEND: %x, STATE: %d", block_no, read_cmd.state);
+
     if (read_cmd.state == DISK_IDLE && sd_start_cmd(block_no, SD_CMD_READ) == 0) {
-        SUCCESS("SENT");
         read_cmd.block_no = block_no;
         read_cmd.state = DISK_RUNNING;
     }
     
     if (read_cmd.state == DISK_FINISHED && block_no == read_cmd.block_no) {
-        SUCCESS("READ");
         memcpy(dst, read_cmd.data.bytes, BLOCK_SIZE);
         read_cmd.state = DISK_IDLE;
         return 0;
@@ -83,6 +99,7 @@ void disk_init() {
     earth->disk_read = disk_read;
     earth->disk_write = disk_write;
     earth->disk_read_kernel = disk_read_kernel;
+    earth->disk_write_kernel = disk_write_kernel;
 
     read_cmd.state = DISK_IDLE;
 

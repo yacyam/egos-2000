@@ -39,7 +39,7 @@ void excp_entry(uint id) {
     /* Otherwise, kill the process if curr_pid is a user application */
 
     /* Student's code ends here. */
-    FATAL("exc %d", id);
+    FATAL("exc %d, sp: %x, pid: %d", id, proc_set[proc_curr_idx].saved_register[28], curr_pid);
 }
 
 #define INTR_ID_SOFT       3
@@ -108,6 +108,10 @@ static void proc_yield() {
     proc_curr_idx = next_idx;
     earth->mmu_switch(curr_pid);
     earth->timer_reset();
+
+    /* Turn off timer if Kernel Process */
+    if (curr_pid < GPID_SHELL) earth->timer_disable();
+    else earth->timer_enable();
 
     /* Student's code goes here (switch privilege level). */
 

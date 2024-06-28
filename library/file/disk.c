@@ -15,11 +15,11 @@ static int disk_getsize() { return FS_DISK_SIZE / BLOCK_SIZE; }
 static int disk_setsize() { FATAL("disk: cannot set the size"); }
 
 static int disk_read(inode_intf bs, uint ino, block_no offset, block_t *block) {
-    return grass->sys_disk(GRASS_FS_START + offset, 1, block->bytes, 0);
+    return grass->sys_disk(GRASS_FS_START + offset, 1, block->bytes, IO_READ);
 }
 
 static int disk_write(inode_intf bs, uint ino, block_no offset, block_t *block) {
-    return grass->sys_disk(GRASS_FS_START + offset, 1, block->bytes, 1);
+    return grass->sys_disk(GRASS_FS_START + offset, 1, block->bytes, IO_WRITE);
 }
 
 static inode_store_t disk;

@@ -1,6 +1,7 @@
 #pragma once
 
 #define BLOCK_SIZE            512
+#define NBLOCKS_PER_PAGE      PAGE_SIZE / BLOCK_SIZE  /* 4KB / 512B == 8 */
 #define PAGING_DEV_SIZE       1024 * 1024
 #define GRASS_NEXEC           8
 #define GRASS_EXEC_SIZE       1024 * 1024

@@ -15,9 +15,12 @@
 
 /* Interface of the paging device, see earth/dev_page.c */
 void  paging_init();
+void  paging_pin(int pid, int frame_id);
+void  paging_unpin(int pid, int frame_id);
 int   paging_invalidate_cache(uint frame_id);
-int   paging_write(uint frame_id, uint page_no);
-char* paging_read(uint frame_id, int alloc_only);
+int   paging_write(int pid, uint frame_id, uint page_no);
+char* paging_read (int pid, uint frame_id, int alloc_only);
+void page_test();
 
 /* Allocation and free of physical frames */
 #define NFRAMES 256
@@ -27,12 +30,15 @@ struct frame_mapping {
     uint page_no; /* Which virtual page is the frame mapped to? */
 } table[NFRAMES];
 
-int mmu_alloc(uint* frame_id, void** cached_addr) {
+int mmu_alloc(int pid, uint* frame_id, void** cached_addr) {
+    // page_test();
+    // CRITICAL("mmu_alloc::: pid: %d", pid);
     for (uint i = 0; i < NFRAMES; i++)
         if (!table[i].use) {
             *frame_id = i;
-            *cached_addr = paging_read(i, 1);
+            *cached_addr = paging_read(pid, i, 1);
             table[i].use = 1;
+            table[i].pid = pid;
             return 0;
         }
     FATAL("mmu_alloc: no more available frames");
@@ -46,6 +52,9 @@ int mmu_free(int pid) {
         }
 }
 
+void soft_tlb_pin(int pid, int frame_id) { paging_pin(pid, frame_id); }
+void soft_tlb_unpin(int pid, int frame_id) { paging_unpin(pid, frame_id); }
+
 /* Software TLB Translation */
 int soft_tlb_map(int pid, uint page_no, uint frame_id) {
     table[frame_id].pid = pid;
@@ -56,15 +65,19 @@ int soft_tlb_switch(int pid) {
     static int curr_vm_pid = -1;
     if (pid == curr_vm_pid) return 0;
 
+    // INFO("soft_tlb_switch::: from: %d, to: %d", curr_vm_pid, pid);
     /* Unmap curr_vm_pid from the user address space */
     for (uint i = 0; i < NFRAMES; i++)
         if (table[i].use && table[i].pid == curr_vm_pid)
-            paging_write(i, table[i].page_no);
+            paging_write(curr_vm_pid, i, table[i].page_no);
 
     /* Map pid to the user address space */
     for (uint i = 0; i < NFRAMES; i++)
-        if (table[i].use && table[i].pid == pid)
-            memcpy((void*)(table[i].page_no << 12), paging_read(i, 0), PAGE_SIZE);
+        if (table[i].use && table[i].pid == pid) {
+            char *src = paging_read(pid, i, 0);
+            // if (pid == 3) CRITICAL("Paged Data: %x", (uint)src[0]);
+            memcpy((void*)(table[i].page_no << 12), src, PAGE_SIZE);
+        }
 
     curr_vm_pid = pid;
 }
@@ -95,7 +108,7 @@ void setup_identity_region(int pid, uint addr, uint npages, uint flag) {
         leaf = (void*)((root[vpn1] << 2) & 0xFFFFF000);
     } else {
         // Leaf has not been allocated
-        earth->mmu_alloc(&frame_id, (void**)&leaf);
+        earth->mmu_alloc(pid, &frame_id, (void**)&leaf);
         table[frame_id].pid = pid;
         memset(leaf, 0, PAGE_SIZE);
         root[vpn1] = ((uint)leaf >> 2) | 0x1;
@@ -109,7 +122,7 @@ void setup_identity_region(int pid, uint addr, uint npages, uint flag) {
 
 void pagetable_identity_mapping(int pid) {
     /* Allocate the root page table and set the page table base (satp) */
-    earth->mmu_alloc(&frame_id, (void**)&root);
+    earth->mmu_alloc(pid, &frame_id, (void**)&root);
     table[frame_id].pid = pid;
     memset(root, 0, PAGE_SIZE);
     pid_to_pagetable_base[pid] = root;
@@ -185,6 +198,8 @@ void mmu_init() {
     earth->translation = SOFT_TLB;
     earth->mmu_map = soft_tlb_map;
     earth->mmu_switch = soft_tlb_switch;
+    earth->mmu_pin = soft_tlb_pin;
+    earth->mmu_unpin = soft_tlb_unpin;
     if (earth->platform == ARTY) return;
 
     /* Choose memory translation mechanism in QEMU */

@@ -5,19 +5,24 @@ typedef unsigned long long ulonglong;
 
 struct earth {
     /* CPU interface */
+    void (*timer_enable)();
+    void (*timer_disable)();
     int (*timer_reset)();
     int (*kernel_entry_init)(void (*entry)(uint, uint));
     int (*trap_external)();
 
-    int (*mmu_alloc)(uint* frame_no, void** cached_addr);
+    int (*mmu_alloc)(int pid, uint* frame_no, void** cached_addr);
     int (*mmu_free)(int pid);
     int (*mmu_map)(int pid, uint page_no, uint frame_no);
     int (*mmu_switch)(int pid);
+    void (*mmu_pin)(int pid, int frame_no);
+    void (*mmu_unpin)(int pid, int frame_no);
 
     /* Devices interface */
     int  (*disk_read)(uint block_no, uint nblocks, char* dst);
     int  (*disk_write)(uint block_no, uint nblocks, char* src);
     void (*disk_read_kernel)(uint block_no, uint nblocks, char* dst);
+    void (*disk_write_kernel)(uint block_no, uint nblocks, char* dst);
 
     int (*tty_recv_intr)();
     int (*tty_read)(char* buf, uint len);
@@ -92,3 +97,7 @@ extern struct grass *grass;
 #define ACCESS(x) (*(__typeof__(*x) volatile *)(x))
 #define REGW(base, offset) (ACCESS((unsigned int*)(base + offset)))
 #define REGB(base, offset) (ACCESS((unsigned char*)(base + offset)))
+
+/* I/O Access Definitions */
+#define IO_READ  0
+#define IO_WRITE 1

@@ -124,8 +124,6 @@ static void single_read(uint offset, char* dst) {
 static void single_write(uint offset, char* src) {
     if (SD_CARD_TYPE == SD_TYPE_SD2) offset = offset * BLOCK_SIZE;
 
-    CRITICAL("offset: %d", offset);
-
     /* Send write request with cmd24 */
     char *arg = (void*)&offset;
     char reply, cmd24[] = {0x58, arg[3], arg[2], arg[1], arg[0], 0xFF};

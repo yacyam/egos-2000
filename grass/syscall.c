@@ -35,6 +35,7 @@ int sys_recv(int from, int* sender, char* buf, uint size) {
 
     sc->msg.sender = from;
     sc->type = SYS_RECV;
+    CRITICAL("BUFF: %x", &buf);
     sys_invoke();
     memcpy(buf, sc->msg.content, size);
     if (sender) *sender = sc->msg.sender;
@@ -50,7 +51,7 @@ int sys_disk(uint block_no, uint nblocks, char* buf, int rw) {
     msg += sizeof(nblocks);
     memcpy(msg, &buf, sizeof(buf));
 
-    sc->type = (rw == 0) ? DISK_READ : DISK_WRITE;
+    sc->type = (rw == IO_READ) ? DISK_READ : DISK_WRITE;
     sys_invoke();
 
     return sc->retval;
