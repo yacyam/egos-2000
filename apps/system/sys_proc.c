@@ -22,12 +22,6 @@ int main() {
     int sender, shell_waiting;
     char buf[SYSCALL_MSG_LEN];
 
-    buf[0] = 'y';
-    // grass->sys_disk(0x08, 1, buf, IO_WRITE);
-    // grass->sys_disk(0x08, 1, buf, IO_READ);
-
-    SUCCESS("CHAR %c", buf[0]);
-
     sys_spawn(SYS_FILE_EXEC_START);
     grass->sys_recv(GPID_FILE, NULL, buf, SYSCALL_MSG_LEN);
     INFO("sys_proc receives: %s", buf);

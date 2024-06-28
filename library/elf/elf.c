@@ -41,7 +41,7 @@ static void load_app(int pid, elf_reader reader,
     void* base;
     uint frame_no, block_offset = pheader->p_offset / BLOCK_SIZE;
     uint code_start = APPS_ENTRY >> 12, stack_start = APPS_ARG >> 12;
-    SUCCESS("ABOUT");
+
     /* Setup the text, rodata, data and bss sections */
     for (uint off = 0; off < pheader->p_filesz; off += BLOCK_SIZE) {
         if (off % PAGE_SIZE == 0) {
@@ -49,7 +49,6 @@ static void load_app(int pid, elf_reader reader,
             earth->mmu_alloc(pid, &frame_no, &base);
             earth->mmu_map(pid, code_start++, frame_no);
             earth->mmu_pin(pid, frame_no);
-            SUCCESS("PINNED");
         }
         reader(block_offset++, (char*)base + (off % PAGE_SIZE));
     }
@@ -81,7 +80,6 @@ static void load_app(int pid, elf_reader reader,
         argv_addr[i] = APPS_ARG + 4 + 4 * CMD_NARGS + i * CMD_ARG_LEN;
 
     earth->mmu_alloc(pid, &frame_no, &base);
-    SUCCESS("DONE");
     earth->mmu_map(pid, stack_start++, frame_no);
 }
 

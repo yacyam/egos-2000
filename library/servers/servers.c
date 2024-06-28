@@ -41,11 +41,9 @@ int file_read(int file_ino, uint offset, char* block) {
     req.offset = offset;
 
     grass->sys_send(GPID_FILE, (void*)&req, sizeof(req));
-    CRITICAL("ADDR %x", buf);
     grass->sys_recv(GPID_FILE, &sender, buf, SYSCALL_MSG_LEN);
     
     struct file_reply *reply = (void*)buf;
-    SUCCESS("COPY");
     memcpy(block, reply->block.bytes, BLOCK_SIZE);
 
     return reply->status == FILE_OK? 0 : -1;

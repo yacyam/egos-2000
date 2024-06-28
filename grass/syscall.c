@@ -35,7 +35,6 @@ int sys_recv(int from, int* sender, char* buf, uint size) {
 
     sc->msg.sender = from;
     sc->type = SYS_RECV;
-    CRITICAL("BUFF: %x", &buf);
     sys_invoke();
     memcpy(buf, sc->msg.content, size);
     if (sender) *sender = sc->msg.sender;
