@@ -24,7 +24,7 @@ int _write(int file, char *ptr, uint len) {
     }
 
     earth->kernel_tty_write("U", 1);
-    return earth->tty_write(ptr, len);
+    return earth->kernel_tty_write(ptr, len);
 }
 
 int _close(int file) { return -1; }

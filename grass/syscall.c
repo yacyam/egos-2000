@@ -56,6 +56,18 @@ int sys_disk(uint block_no, uint nblocks, char* buf, int rw) {
     return sc->retval;
 }
 
+int sys_tty(char *buf, uint len, int rw) {
+    void *msg = (void *)sc->msg.content;
+
+    memcpy(msg, &buf, sizeof(buf));
+    msg += sizeof(buf);
+    memcpy(msg, &len, sizeof(len));
+
+    sc->type = (rw == IO_READ) ? TTY_READ : TTY_WRITE;
+    sys_invoke();
+    return sc->retval;
+}
+
 void sys_exit(int status) {
     sc->type = SYS_EXIT;
     sys_invoke();

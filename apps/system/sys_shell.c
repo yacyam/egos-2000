@@ -14,7 +14,7 @@ int read_chars(char *buf, int len) {
     char c;
 
     for (int i = 0; i < len - 1; i++) {
-        earth->kernel_tty_read(&c, 1);
+        grass->sys_tty(&c, 1, IO_READ);
         buf[i] = (char)c;
 
         switch (c) {

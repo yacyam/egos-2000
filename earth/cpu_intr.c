@@ -18,6 +18,7 @@
 #define PLIC_SPI_ID    6 
 
 int disk_intr();
+int tty_intr();
 
 /* These are two static variables storing
  * the addresses of the handler functions;
@@ -45,7 +46,7 @@ int trap_external() {
     int rc;
 
     if (cause == PLIC_UART_ID) {
-        FATAL("trap_ext: UART unimplemented");
+        rc = tty_intr();
     } else if (cause == PLIC_SPI_ID) {
         rc = disk_intr();
     }
@@ -81,6 +82,6 @@ void intr_init() {
 
     /* Enable Interrupts on PLIC for UART and SPI */
     REGW(PLIC_BASE, PLIC_THRESHOLD) = 0;
-    // extr_enable(PLIC_UART_ID);
+    extr_enable(PLIC_UART_ID);
     extr_enable(PLIC_SPI_ID);
 }

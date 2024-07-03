@@ -61,6 +61,7 @@ struct grass {
     int  (*sys_send)(int pid, char* msg, uint size);
     int  (*sys_recv)(int pid, int* sender, char* buf, uint size);
     int  (*sys_disk)(uint block_no, uint nblocks, char* src, int rw);
+    int  (*sys_tty) (char *buf, uint len, int rw);
 };
 
 extern struct earth *earth;

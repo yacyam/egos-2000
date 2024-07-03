@@ -10,6 +10,8 @@ enum syscall_type {
     SYS_WAIT,
     DISK_READ,
     DISK_WRITE,
+    TTY_READ,
+    TTY_WRITE,
 	SYS_NCALLS
 };
 
@@ -40,3 +42,4 @@ int  sys_wait(int *pid);
 int  sys_send(int pid, char* msg, uint size);
 int  sys_recv(int pid, int* sender, char* buf, uint size);
 int  sys_disk(uint block_no, uint nblocks, char* dst, int rw);
+int  sys_tty (char *buf, uint len, int rw);

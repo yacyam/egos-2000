@@ -209,6 +209,19 @@ static int proc_disk(struct syscall *sc) {
     return earth->disk_write(block_no, nblocks, buf);
 }
 
+static int proc_tty(struct syscall *sc) {
+    void *msg = (void *)sc->msg.content;
+    char *buf; uint len;
+
+    memcpy(&buf, msg, sizeof(buf));
+    msg += sizeof(buf);
+    memcpy(&len, msg, sizeof(len));
+
+    if (sc->type == TTY_READ)
+        return earth->tty_read(buf);
+    return earth->tty_write(buf, len);
+}
+
 static void proc_syscall(struct process *proc) {
     struct syscall *sc = (struct syscall*)SYSCALL_ARG;
     int rc;
@@ -230,6 +243,9 @@ static void proc_syscall(struct process *proc) {
         return;
     case DISK_READ: case DISK_WRITE:
         rc = proc_disk(sc);
+        break;
+    case TTY_READ: case TTY_WRITE:
+        rc = proc_tty(sc);
         break;
     default:
         FATAL("proc_syscall: got unknown syscall type=%d", sc->type);
