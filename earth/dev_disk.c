@@ -120,7 +120,7 @@ void disk_init() {
     printf("Enter 0: microSD card\r\nEnter 1: on-board ROM\r\n");
 
     char buf[2];
-    for (buf[0] = 0; buf[0] != '0' && buf[0] != '1'; earth->tty_read(buf, 2));
+    for (buf[0] = 0; buf[0] != '0' && buf[0] != '1'; earth->kernel_tty_read(buf, 1));
     type = (buf[0] == '0')? SD_CARD : FLASH_ROM;
     INFO("%s is chosen", type == SD_CARD? "microSD" : "on-board ROM");
 

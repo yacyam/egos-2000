@@ -124,7 +124,7 @@ void pagetable_identity_mapping(int pid) {
 
     /* Allocate the leaf page tables */
     setup_identity_region(pid, 0x02000000, 16, OS_RWX);   /* CLINT */
-    setup_identity_region(pid, UART0_BASE, 1, OS_RWX);    /* UART0 */
+    setup_identity_region(pid, UART_BASE, 1, OS_RWX);    /* UART0 */
     setup_identity_region(pid, SPI_BASE, 1, OS_RWX);      /* SPI1 */
     setup_identity_region(pid, PLIC_BASE, 1024, OS_RWX);  /* PLIC */
     setup_identity_region(pid, 0x20400000, 1024, OS_RWX); /* boot ROM */
@@ -202,7 +202,7 @@ void mmu_init() {
     printf("Enter 0: page tables\r\nEnter 1: software TLB\r\n");
 
     char buf[2];
-    for (buf[0] = 0; buf[0] != '0' && buf[0] != '1'; earth->tty_read(buf, 2));
+    for (buf[0] = 0; buf[0] != '0' && buf[0] != '1'; earth->kernel_tty_read(buf, 1));
     earth->translation = (buf[0] == '0') ? PAGE_TABLE : SOFT_TLB;
     INFO("%s translation is chosen", earth->translation == PAGE_TABLE ? "Page table" : "Software");
 

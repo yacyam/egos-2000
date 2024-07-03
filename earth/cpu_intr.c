@@ -32,16 +32,12 @@ void trap_from_M_mode();
 void trap_from_S_mode();
 
 void trap_entry() {
-    uint mcause, mepc, ra;
+    uint mcause;
     asm("csrr %0, mcause" : "=r"(mcause));
-    if ((mcause & (1 << 31)) == 0) {
-        asm("csrr %0, mepc" : "=r"(mepc));
-        asm("lw %0, -116(%1)":"=r"(ra):"r"(GRASS_STACK_TOP));
 
-        INFO("MEPC: %x, RA: %x", mepc, ra);
-    }
-
+    grass->mode = MODE_KERNEL;
     kernel_entry(mcause & (1 << 31), mcause & 0x3FF);
+    grass->mode = MODE_USER;
 }
 
 int trap_external() {
@@ -85,6 +81,6 @@ void intr_init() {
 
     /* Enable Interrupts on PLIC for UART and SPI */
     REGW(PLIC_BASE, PLIC_THRESHOLD) = 0;
-    extr_enable(PLIC_UART_ID);
+    // extr_enable(PLIC_UART_ID);
     extr_enable(PLIC_SPI_ID);
 }

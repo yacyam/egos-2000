@@ -48,6 +48,7 @@ int main() {
     proc_set_running(proc_alloc(GPID_UNUSED));
     earth->mmu_switch(GPID_PROCESS);
 
+    grass->mode = MODE_USER;
     /* Jump to the entry of process GPID_PROCESS */
     asm("mv a0, %0" ::"r" (APPS_ARG));
     asm("csrw mepc, %0" ::"r"(APPS_ENTRY));

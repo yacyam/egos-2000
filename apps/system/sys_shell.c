@@ -10,6 +10,33 @@
 #include "app.h"
 #include <string.h>
 
+int read_chars(char *buf, int len) {
+    char c;
+
+    for (int i = 0; i < len - 1; i++) {
+        earth->kernel_tty_read(&c, 1);
+        buf[i] = (char)c;
+
+        switch (c) {
+        case 0x03: /* Ctrl+C    */
+            buf[0] = 0;
+        case 0x0d: /* Enter     */
+            buf[i] = 0;
+            printf("\r\n");
+            return c == 0x03 ? 0 : i;
+        case 0x7f: /* Backspace */
+            c = 0;
+            if (i) printf("\b \b");
+            i = i ? i - 2 : i - 1;
+        }
+
+        if (c) printf("%c", c);
+    }
+
+    buf[len - 1] = 0;
+    return len - 1;
+}
+
 int parse_request(char* buf, struct proc_request* req) {
     uint idx = 0, nargs = 0;
     memset(req->argv, 0, CMD_NARGS * CMD_ARG_LEN);
@@ -63,6 +90,6 @@ int main() {
 
         do {
             printf("\x1B[1;32m➜ \x1B[1;36m%s\x1B[1;0m ", grass->workdir);
-        } while (earth->tty_read(buf, 256) == 0);
+        } while (read_chars(buf, 256) == 0);
     }
 }

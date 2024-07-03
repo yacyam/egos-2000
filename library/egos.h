@@ -24,9 +24,12 @@ struct earth {
     void (*kernel_disk_read)(uint block_no, uint nblocks, char* dst);
     void (*kernel_disk_write)(uint block_no, uint nblocks, char* dst);
 
-    int (*tty_recv_intr)();
-    int (*tty_read)(char* buf, uint len);
+    int (*tty_read)(char* c);
+    int (*tty_read_tail)(char* c);
+    void (*kernel_tty_read)(char *buf, uint len);
+
     int (*tty_write)(char* buf, uint len);
+    int (*kernel_tty_write)(char *buf, uint len);
 
     int (*tty_printf)(const char *format, ...);
     int (*tty_info)(const char *format, ...);
@@ -40,6 +43,9 @@ struct earth {
 };
 
 struct grass {
+    /* Privilege Metadata */
+    enum { MODE_KERNEL, MODE_USER } mode;
+
     /* Shell environment variables */
     int workdir_ino;
     char workdir[128];
@@ -90,7 +96,7 @@ extern struct grass *grass;
 /* Platform specific configuration */
 #define MSIP       (earth->platform == ARTY? 0x2000000UL : 0x2000004UL)
 #define SPI_BASE   (earth->platform == ARTY? 0x10024000UL : 0x10050000UL)
-#define UART0_BASE (earth->platform == QEMU_LATEST? 0x10010000UL : 0x10013000UL)
+#define UART_BASE (earth->platform == QEMU_LATEST? 0x10010000UL : 0x10013000UL)
 #define PLIC_BASE  0x0C000000
 
 /* Memory-mapped I/O register access macros */
