@@ -18,13 +18,15 @@
 int _write(int file, char *ptr, uint len) {
     if (file != STDOUT_FILENO) return -1;
 
-    if (grass->mode == MODE_KERNEL) {
-        earth->kernel_tty_write("M", 1);
+    if (grass->mode == MODE_KERNEL) 
         return earth->kernel_tty_write(ptr, len);
+
+    if (grass->sys_tty(ptr, len, IO_WRITE) == -1) {
+        _write(file, ptr, len / 2);
+        _write(file, ptr + (len / 2), len - (len / 2));
     }
 
-    earth->kernel_tty_write("U", 1);
-    return earth->kernel_tty_write(ptr, len);
+    return 0;
 }
 
 int _close(int file) { return -1; }

@@ -186,7 +186,7 @@ int tty_intr() {
 
     if (ip & UART_RX_INTR)
         rc = tty_read_uart();
-    if (ip & UART_TX_INTR)
+    if (ip & UART_TX_INTR) 
         tty_write_uart();
     return rc;
 }
