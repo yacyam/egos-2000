@@ -12,6 +12,7 @@
 
 
 #include "egos.h"
+#include "../earth/tty.h"
 #include "syscall.h"
 #include "process.h"
 #include <string.h>
@@ -49,6 +50,7 @@ void excp_entry(uint id) {
 static void proc_yield();
 static void proc_syscall(struct process *proc);
 static void proc_external();
+static void proc_exit(struct process *proc);
 
 uint proc_curr_idx;
 struct process proc_set[MAX_NPROCESS];
@@ -68,7 +70,12 @@ void intr_entry(uint id) {
 }
 
 static void proc_external() {
-    earth->trap_external();
+    if (earth->trap_external() == RET_SPECIAL_CHAR) {
+        /* Handle CTRL-C */
+        for (int i = 0; i < MAX_NPROCESS; i++)
+            if (proc_set[i].pid >= GPID_USER_START && proc_set[i].status != PROC_UNUSED)
+                proc_exit(&proc_set[i]); 
+    }
 }
 
 static void proc_wfi() {
