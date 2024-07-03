@@ -11,14 +11,16 @@ enum sd_rdstate {
       SD_RD_READY,
       SD_RD_WAIT_RESPONSE,
       SD_RD_WAIT_START,
-      SD_RD_READ_BLOCK
+      SD_RD_READ_BLOCK,
+      SD_RD_FINISHED
 };
 
 enum sd_wrstate {
       SD_WR_READY,
-      SD_WR_WAIT_RESPONSE_1,
+      SD_WR_WAIT_RESPONSE,
       SD_WR_WRITE_BLOCK,
-      SD_WR_WAIT_RESPONSE_2
+      SD_WR_WAIT_ACK,
+      SD_WR_FINISHED
 };
 
 struct sd {
@@ -54,8 +56,8 @@ char sd_exec_cmd(char*);
 char sd_exec_acmd(char*);
 
 void sdinit();
-int sdread(uint offset, uint nblock, char* dst);
-int sdwrite(uint offset, uint nblock, char* src);
+int kernel_sd_read(uint offset, uint nblock, char* dst);
+int kernel_sd_write(uint offset, uint nblock, char* src);
 
 #define CMD_LEN      6
 #define DUMMY_BYTE   0xFF

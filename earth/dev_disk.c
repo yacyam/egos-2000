@@ -19,7 +19,8 @@ enum disk_type {
 };
 static enum disk_type type;
 
-struct disk_read_cmd {
+struct disk_cmd {
+    int exec;          /* What type of Command is Executing? */
     enum {
         DISK_IDLE,     /* Waiting for Command */
         DISK_RUNNING,  /* Executing Command */
@@ -28,42 +29,39 @@ struct disk_read_cmd {
     block_no block_no;
     block_t data;
 };
-
-static struct disk_read_cmd read_cmd;
+static struct disk_cmd disk_cmd;
 
 int disk_intr() {
-    /* SD Card Read Out Block into Buffer */
-    if (sd_spi_intr(read_cmd.data.bytes) == 0 && read_cmd.state == DISK_RUNNING) {
-        read_cmd.state = DISK_FINISHED;
+    /* Was Disk Command completed by SD Card */
+    if (sd_spi_intr(disk_cmd.data.bytes) == 0 && disk_cmd.state == DISK_RUNNING) {
+        disk_cmd.state = (disk_cmd.exec == IO_READ) ? DISK_FINISHED : DISK_IDLE;
         return 0;
     }
     
     return -1;
 }
 
-void disk_flush_kernel() {
-    if (read_cmd.state == DISK_RUNNING) {
-        while (disk_intr() != 0);
-        read_cmd.state = DISK_FINISHED;
-    }
+void kernel_disk_flush() {
+    if (disk_cmd.state == DISK_RUNNING)
+        while (disk_intr() != 0); // Once interrupt succeeds, entire block is read/written
 }
 
-void disk_read_kernel(uint block_no, uint nblocks, char* dst) {
+void kernel_disk_read(uint block_no, uint nblocks, char* dst) {
     if (type == SD_CARD) {
-        disk_flush_kernel();
-        sdread(block_no, nblocks, dst);
+        kernel_disk_flush();
+        kernel_sd_read(block_no, nblocks, dst);
     } else {
         char* src = (char*)0x20800000 + block_no * BLOCK_SIZE;
         memcpy(dst, src, nblocks * BLOCK_SIZE);
     }
 }
 
-void disk_write_kernel(uint block_no, uint nblocks, char* src) {
+void kernel_disk_write(uint block_no, uint nblocks, char* src) {
     if (type == FLASH_ROM)
         FATAL("disk_write: Writing to the read-only ROM");
 
-    disk_flush_kernel();
-    sdwrite(block_no, nblocks, src);
+    kernel_disk_flush();
+    kernel_sd_write(block_no, nblocks, src);
 }
 
 int disk_read(uint block_no, uint nblocks, char* dst) {
@@ -73,14 +71,15 @@ int disk_read(uint block_no, uint nblocks, char* dst) {
         return 0;
     } 
 
-    if (read_cmd.state == DISK_IDLE && sd_start_cmd(block_no, SD_CMD_READ) == 0) {
-        read_cmd.block_no = block_no;
-        read_cmd.state = DISK_RUNNING;
+    if (disk_cmd.state == DISK_IDLE && sd_start_cmd(block_no, SD_CMD_READ) == 0) {
+        disk_cmd.block_no = block_no;
+        disk_cmd.state = DISK_RUNNING;
+        disk_cmd.exec = IO_READ;
     }
     
-    if (read_cmd.state == DISK_FINISHED && block_no == read_cmd.block_no) {
-        memcpy(dst, read_cmd.data.bytes, BLOCK_SIZE);
-        read_cmd.state = DISK_IDLE;
+    if (disk_cmd.state == DISK_FINISHED && block_no == disk_cmd.block_no) {
+        memcpy(dst, disk_cmd.data.bytes, BLOCK_SIZE);
+        disk_cmd.state = DISK_IDLE;
         return 0;
     }
 
@@ -91,17 +90,25 @@ int disk_write(uint block_no, uint nblocks, char* src) {
     if (type == FLASH_ROM)
         FATAL("disk_write: Writing to the read-only ROM");
 
-    sdwrite(block_no, nblocks, src);
-    return 0;
+    if (disk_cmd.state == DISK_IDLE && sd_start_cmd(block_no, SD_CMD_WRITE) == 0) {
+        memcpy(disk_cmd.data.bytes, src, BLOCK_SIZE);
+
+        disk_cmd.block_no = block_no;
+        disk_cmd.state = DISK_RUNNING;
+        disk_cmd.exec = IO_WRITE;
+        return 0;
+    }
+
+    return -1;
 }
 
 void disk_init() {
     earth->disk_read = disk_read;
     earth->disk_write = disk_write;
-    earth->disk_read_kernel = disk_read_kernel;
-    earth->disk_write_kernel = disk_write_kernel;
+    earth->kernel_disk_read = kernel_disk_read;
+    earth->kernel_disk_write = kernel_disk_write;
 
-    read_cmd.state = DISK_IDLE;
+    disk_cmd.state = DISK_IDLE;
 
     if (earth->platform == QEMU_SIFIVE) {
         /* SiFive QEMU v5 does not support SD card emulation */

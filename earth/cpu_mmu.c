@@ -62,7 +62,6 @@ int soft_tlb_switch(int pid) {
     static int curr_vm_pid = -1;
     if (pid == curr_vm_pid) return 0;
 
-    // INFO("soft_tlb_switch::: from: %d, to: %d", curr_vm_pid, pid);
     /* Unmap curr_vm_pid from the user address space */
     for (uint i = 0; i < NFRAMES; i++)
         if (table[i].use && table[i].pid == curr_vm_pid)

@@ -23,15 +23,15 @@ struct frame_cache {
 } cache_slots[ARTY_CACHED_NFRAMES];
 char *pages_start = (void*)FRAME_CACHE_START;
 
-static uint cache_eviction(int pid) {
+static uint cache_eviction() {
     uint idx, frame_id;
-    /* Randomly select a cache slot pid is not using to evict */
+    /* Randomly select a cache slot that isn't pinned */
     do {
         idx = rand() % ARTY_CACHED_NFRAMES;
-    } while (cache_slots[idx].pid == pid || cache_slots[idx].pinned);
+    } while (cache_slots[idx].pinned);
     
     frame_id = cache_slots[idx].frame_id;
-    earth->disk_write_kernel(frame_id * NBLOCKS_PER_PAGE, NBLOCKS_PER_PAGE, pages_start + (PAGE_SIZE * idx));
+    earth->kernel_disk_write(frame_id * NBLOCKS_PER_PAGE, NBLOCKS_PER_PAGE, pages_start + (PAGE_SIZE * idx));
     return idx;
 }
 
@@ -56,21 +56,18 @@ int paging_invalidate_cache(uint frame_id) {
 
 int paging_write(int pid, uint frame_id, uint page_no) {
     char* src = (void*)(page_no << 12);
-    /*
     if (earth->platform != ARTY) {
         memcpy(pages_start + frame_id * PAGE_SIZE, src, PAGE_SIZE);
         return 0;
     }
-    */
 
     for (uint i = 0; i < ARTY_CACHED_NFRAMES; i++)
         if (cache_slots[i].frame_id == frame_id && cache_slots[i].pid == pid) {
-            // INFO("paging_write::: frame_id: %d, cache_pid: %d, curr_pid: %d", cache_slots[i].frame_id, cache_slots[i].pid, pid);
             memcpy(pages_start + PAGE_SIZE * i, src, PAGE_SIZE);
             return 0;
         }
 
-    uint free_idx = cache_eviction(pid);
+    uint free_idx = cache_eviction();
     cache_slots[free_idx].frame_id = frame_id;
     cache_slots[free_idx].pid = pid;
     cache_slots[free_idx].pinned = 0;
@@ -79,23 +76,21 @@ int paging_write(int pid, uint frame_id, uint page_no) {
 }
 
 char* paging_read(int pid, uint frame_id, int alloc_only) {
-    /*
     if (earth->platform != ARTY) return pages_start + frame_id * PAGE_SIZE;
-    */
+
     int free_idx = -1;
     for (uint i = 0; i < ARTY_CACHED_NFRAMES; i++) {
         if (cache_slots[i].frame_id == -1 && free_idx == -1) free_idx = i;
         if (cache_slots[i].frame_id == frame_id) return pages_start + PAGE_SIZE * i;
     }
 
-    if (free_idx == -1) free_idx = cache_eviction(pid);
+    if (free_idx == -1) free_idx = cache_eviction();
     cache_slots[free_idx].frame_id = frame_id;
     cache_slots[free_idx].pid = pid;
     cache_slots[free_idx].pinned = 0;
 
-    // INFO("paging_read::: from: %d, frame: %d", pid, frame_id);
     if (!alloc_only)
-        earth->disk_read_kernel(frame_id * NBLOCKS_PER_PAGE, NBLOCKS_PER_PAGE, pages_start + PAGE_SIZE * free_idx);
+        earth->kernel_disk_read(frame_id * NBLOCKS_PER_PAGE, NBLOCKS_PER_PAGE, pages_start + PAGE_SIZE * free_idx);
 
     return pages_start + PAGE_SIZE * free_idx;
 }

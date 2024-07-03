@@ -21,8 +21,8 @@ struct earth {
     /* Devices interface */
     int  (*disk_read)(uint block_no, uint nblocks, char* dst);
     int  (*disk_write)(uint block_no, uint nblocks, char* src);
-    void (*disk_read_kernel)(uint block_no, uint nblocks, char* dst);
-    void (*disk_write_kernel)(uint block_no, uint nblocks, char* dst);
+    void (*kernel_disk_read)(uint block_no, uint nblocks, char* dst);
+    void (*kernel_disk_write)(uint block_no, uint nblocks, char* dst);
 
     int (*tty_recv_intr)();
     int (*tty_read)(char* buf, uint len);
@@ -54,7 +54,7 @@ struct grass {
     int  (*sys_wait)(int *pid);
     int  (*sys_send)(int pid, char* msg, uint size);
     int  (*sys_recv)(int pid, int* sender, char* buf, uint size);
-    int  (*sys_disk)(uint block_no, uint nblocks, char* dst, int rw);
+    int  (*sys_disk)(uint block_no, uint nblocks, char* src, int rw);
 };
 
 extern struct earth *earth;

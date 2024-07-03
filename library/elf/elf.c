@@ -39,7 +39,7 @@ static void load_app(int pid, elf_reader reader,
     }
 
     void* base;
-    uint frame_no, block_offset = pheader->p_offset / BLOCK_SIZE;
+    uint frame_no = -1, block_offset = pheader->p_offset / BLOCK_SIZE;
     uint code_start = APPS_ENTRY >> 12, stack_start = APPS_ARG >> 12;
 
     /* Setup the text, rodata, data and bss sections */
@@ -50,16 +50,16 @@ static void load_app(int pid, elf_reader reader,
             earth->mmu_map(pid, code_start++, frame_no);
             earth->mmu_pin(pid, frame_no);
         }
+        /* File Server Request for block_offset, read into cache entry base */
         reader(block_offset++, (char*)base + (off % PAGE_SIZE));
     }
     uint last_page_filled = pheader->p_filesz % PAGE_SIZE;
     uint last_page_nzeros = PAGE_SIZE - last_page_filled;
-    if (last_page_filled) {
-        memset((char*)base + last_page_filled, 0, last_page_nzeros);
-        earth->mmu_unpin(pid, frame_no);
-    }
-    
 
+    if (last_page_filled) memset((char*)base + last_page_filled, 0, last_page_nzeros);
+
+    if (frame_no != -1) earth->mmu_unpin(pid, frame_no);
+    
     while (code_start < ((APPS_ENTRY + APPS_SIZE) >> 12)) {
         earth->mmu_alloc(pid, &frame_no, &base);
         earth->mmu_map(pid, code_start++, frame_no);

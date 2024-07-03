@@ -17,7 +17,7 @@ struct grass *grass = (void*)APPS_STACK_TOP;
 struct earth *earth = (void*)GRASS_STACK_TOP;
 
 static int sys_proc_read(uint block_no, char* dst) {
-    earth->disk_read_kernel(SYS_PROC_EXEC_START + block_no, 1, dst);
+    earth->kernel_disk_read(SYS_PROC_EXEC_START + block_no, 1, dst);
     return 0;
 }
 

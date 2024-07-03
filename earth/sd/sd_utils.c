@@ -39,25 +39,26 @@ void sd_update_read(struct sd *sd, char reply) {
         break;
     case SD_RD_WAIT_START:
         if (reply == START_TOKEN) sd->rdstate = SD_RD_READ_BLOCK;
+        else FATAL("SD card replies cmd17 start token with 0x%.2x", reply);
         break;
     }
 }
 
 void sd_update_write(struct sd *sd, char reply) {
     switch (sd->wrstate) {
-    case SD_WR_WAIT_RESPONSE_1:
+    case SD_WR_WAIT_RESPONSE:
         if (reply == 0) sd->wrstate = SD_WR_WRITE_BLOCK;
         else FATAL("SD card replies cmd24 with status 0x%.2x", reply);
         break;
-    case SD_WR_WAIT_RESPONSE_2:
-        if (reply == 0x05) sd->wrstate = SD_WR_READY;
+    case SD_WR_WAIT_ACK:
+        if ((reply & 0x1F) == 0x05) sd->wrstate = SD_WR_FINISHED;
         else FATAL("SD card write ack with status 0x%.2x", reply);
         break;
     }
 }
 
 void sd_update_waiting(struct sd *sd, char reply) {
-    if (reply == DUMMY_BYTE) return; /* Busy Waiting Response, Do not update state */
+    if (reply == DUMMY_BYTE) return; // Busy Response
 
     if (sd->exec == SD_CMD_READ)
         sd_update_read(sd, reply);
@@ -91,17 +92,17 @@ char sd_exec_cmd(char* cmd) {
     for (uint i = 0; i < 6; i++) busy_send_byte(cmd[i]);
 
     for (uint reply, i = 0; i < 8000; i++)
-        if ((reply = busy_exch_byte(0xFF)) != 0xFF) return reply;
+        if ((reply = busy_exch_byte(DUMMY_BYTE)) != DUMMY_BYTE) return reply;
 
     FATAL("SD card not responding cmd%d", cmd[0] ^ 0x40);
 }
 
 char sd_exec_acmd(char* cmd) {
-    char cmd55[] = {0x77, 0x00, 0x00, 0x00, 0x00, 0xFF};
-    while (busy_exch_byte(0xFF) != 0xFF);
+    char cmd55[] = {0x77, 0x00, 0x00, 0x00, 0x00, DUMMY_BYTE};
+    while (busy_exch_byte(DUMMY_BYTE) != DUMMY_BYTE);
     sd_exec_cmd(cmd55);
 
-    while (busy_exch_byte(0xFF) != 0xFF);
+    while (busy_exch_byte(DUMMY_BYTE) != DUMMY_BYTE);
     return sd_exec_cmd(cmd);
 }
 
@@ -121,11 +122,11 @@ void sdinit() {
 
     /* Enable SPI Interrupts */
     REGW(SPI_BASE, SPI_IE) = 2; // Only Enable Rx Interrupts
-    REGW(SPI_BASE, SPI_RXMARK) = 4; // Set Watermark for Rx to 0
+    REGW(SPI_BASE, SPI_RXMARK) = 4; // Set Watermark for Rx
 
     INFO("Set CS and MOSI to 1 and toggle clock.");
     uint i, rxdata;
-    for (i = 0; i < 1000; i++) busy_send_byte(0xFF);
+    for (i = 0; i < 1000; i++) busy_send_byte(DUMMY_BYTE);
     /* Keep chip select line low */
     REGW(SPI_BASE, SPI_CSDEF) = 1;
     for (i = 0; i < 200000; i++);
@@ -133,8 +134,8 @@ void sdinit() {
     INFO("Set CS to 0 and send cmd0 to SD card.");
     char cmd0[] = {0x40, 0x00, 0x00, 0x00, 0x00, 0x95};
     char reply = sd_exec_cmd(cmd0);
-    while (reply != 0x01) reply = busy_exch_byte(0xFF);
-    while (busy_exch_byte(0xFF) != 0xFF);
+    while (reply != 0x01) reply = busy_exch_byte(DUMMY_BYTE);
+    while (busy_exch_byte(DUMMY_BYTE) != DUMMY_BYTE);
 
     INFO("Set SPI clock frequency to %ldHz", CPU_CLOCK_RATE / 4);
     spi_set_clock(CPU_CLOCK_RATE / 4);
@@ -150,33 +151,33 @@ void sdinit() {
         /* Only need the last byte of r7 response */
         uint payload;
         for (uint i = 0; i < 4; i++)
-            ((char*)&payload)[3 - i] = busy_exch_byte(0xFF);
+            ((char*)&payload)[3 - i] = busy_exch_byte(DUMMY_BYTE);
         INFO("SD card replies cmd8 with status 0x%.2x and payload 0x%.8x", reply, payload);
 
         if ((payload & 0xFFF) != 0x1AA) FATAL("Fail to check SD card type");
         SD_CARD_TYPE = SD_TYPE_SD2;
     }
-    while (busy_exch_byte(0xFF) != 0xFF);
+    while (busy_exch_byte(DUMMY_BYTE) != DUMMY_BYTE);
 
-    char acmd41[] = {0x69, (SD_CARD_TYPE == SD_TYPE_SD2)? 0x40 : 0x00, 0x00, 0x00, 0x00, 0xFF};
+    char acmd41[] = {0x69, (SD_CARD_TYPE == SD_TYPE_SD2)? 0x40 : 0x00, 0x00, 0x00, 0x00, DUMMY_BYTE};
     while (sd_exec_acmd(acmd41));
-    while (busy_exch_byte(0xFF) != 0xFF);
+    while (busy_exch_byte(DUMMY_BYTE) != DUMMY_BYTE);
 
     INFO("Set block size to 512 bytes with cmd16");
-    char cmd16[] = {0x50, 0x00, 0x00, 0x02, 0x00, 0xFF};
+    char cmd16[] = {0x50, 0x00, 0x00, 0x02, 0x00, DUMMY_BYTE};
     reply = sd_exec_cmd(cmd16);
-    while (busy_exch_byte(0xFF) != 0xFF);
+    while (busy_exch_byte(DUMMY_BYTE) != DUMMY_BYTE);
 
     if (SD_CARD_TYPE == SD_TYPE_SD2) {
         INFO("Check SD card capacity with cmd58");
 
-        char reply, payload[4], cmd58[] = {0x7A, 0x00, 0x00, 0x00, 0x00, 0xFF};
+        char reply, payload[4], cmd58[] = {0x7A, 0x00, 0x00, 0x00, 0x00, DUMMY_BYTE};
         sd_exec_cmd(cmd58);
-        for (uint i = 0; i < 4; i++) payload[3 - i] = busy_exch_byte(0xFF);
+        for (uint i = 0; i < 4; i++) payload[3 - i] = busy_exch_byte(DUMMY_BYTE);
 
         if ((payload[3] & 0xC0) == 0xC0) SD_CARD_TYPE = SD_TYPE_SDHC;
         INFO("SD card replies cmd58 with payload 0x%.8x", *(int*)payload);
 
-        while (busy_exch_byte(0xFF) != 0xFF);
+        while (busy_exch_byte(DUMMY_BYTE) != DUMMY_BYTE);
     }
 }

@@ -39,7 +39,7 @@ void excp_entry(uint id) {
     /* Otherwise, kill the process if curr_pid is a user application */
 
     /* Student's code ends here. */
-    FATAL("exc %d, sp: %x, pid: %d", id, proc_set[proc_curr_idx].saved_register[28], curr_pid);
+    FATAL("exc %d", id);
 }
 
 #define INTR_ID_SOFT       3
