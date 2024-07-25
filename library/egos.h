@@ -72,10 +72,9 @@ extern struct grass *grass;
 #define FRAME_CACHE_END   0x80020000
 #define FRAME_CACHE_START 0x80004000  /* 112KB  frame cache           */
                                        /*        earth interface       */
-#define GRASS_STACK_TOP   0x80020000  /* 8KB    earth/grass stack     */
-#define LOADER_ENTRY      0x80020000
+#define GRASS_STACK_TOP   0x80018000  /* 8KB    earth/grass stack     */
                                        /*        grass interface       */
-#define APPS_STACK_TOP    0x80030000  /* 6KB    app stack             */
+#define APPS_STACK_TOP    0x80020000  /* 6KB    app stack             */
 #define SYSCALL_ARG       0x80000400  /* 1KB    system call args      */
 #define APPS_ARG          0x80000000  /* 1KB    app main() argc, argv */
 #define APPS_SIZE         0x00003000
@@ -84,6 +83,12 @@ extern struct grass *grass;
 #define GRASS_ENTRY       0x80005000  /* 8KB    grass code+data       */
                                        /* 12KB   earth data            */
                                        /* earth code is in QSPI flash  */
+
+
+#define LOADER_PENTRY          0x80030000
+#define LOADER_VSTACK_TOP      0x80030000
+#define LOADER_VSTACK_NPAGES   4
+#define LOADER_VSEGMENT_TABLE  LOADER_STACK_TOP - (PAGE_SIZE * LOADER_STACK_NPAGES)
 
 
 #ifndef LIBC_STDIO

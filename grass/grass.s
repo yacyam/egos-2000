@@ -10,5 +10,5 @@
     .global grass_entry
 
 grass_entry:
-    li sp,0x80003f80
+    li sp,0x80018000
     call main
