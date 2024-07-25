@@ -18,7 +18,7 @@ static char* brk = &__heap_start;
  */
 
 char *_sbrk(int size) {
-    char* heap_end = (earth->platform == ARTY)? (&__heap_end) : (char*)0xa000000;
+    char* heap_end = (&__heap_end);
     if (brk + size > heap_end) {
         earth->kernel_tty_write("_sbrk: heap grows too large\r\n", 29);
         *(int*)(0xFFFFFFF0) = 1; /* Trigger a memory exception */
