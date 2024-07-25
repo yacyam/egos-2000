@@ -20,6 +20,7 @@ RELEASE = build/release
 APPS_DEPS = apps/*.* library/egos.h library/*/*
 GRASS_DEPS = grass/* library/egos.h library/*/*
 EARTH_DEPS = earth/* earth/sd/* library/egos.h library/*/*
+LOADER_DEPS = earth/ld/* library/egos.h library/*/*
 USRAPP_ELFS = $(patsubst %.c, $(RELEASE)/%.elf, $(notdir $(wildcard apps/user/*.c)))
 SYSAPP_ELFS = $(patsubst %.c, $(RELEASE)/%.elf, $(notdir $(wildcard apps/system/*.c)))
 
@@ -29,7 +30,12 @@ CFLAGS = -mabi=ilp32 -Wl,--gc-sections -ffunction-sections -fdata-sections -fdia
 COMMON = $(CFLAGS) $(INCLUDE) -D CPU_CLOCK_RATE=65000000
 DEBUG_FLAGS =  --source --all-headers --demangle --line-numbers --wide
 
-egos: $(USRAPP_ELFS) $(SYSAPP_ELFS) $(RELEASE)/grass.elf $(RELEASE)/earth.elf
+egos: $(USRAPP_ELFS) $(SYSAPP_ELFS) $(RELEASE)/grass.elf $(RELEASE)/earth.elf $(RELEASE)/loader.elf
+
+$(RELEASE)/loader.elf: $(LOADER_DEPS)
+	@echo "$(CYAN)-------- Compile the LOADER --------$(END)"
+	$(RISCV_CC) $(COMMON) earth/ld/loader.s $(filter %.c, $(wildcard $^)) -Tearth/ld/loader.lds $(LDFLAGS) -o $@
+	@$(OBJDUMP) $(DEBUG_FLAGS) $@ > $(DEBUG)/loader.lst
 
 $(RELEASE)/earth.elf: $(EARTH_DEPS)
 	@echo "$(YELLOW)-------- Compile the Earth Layer --------$(END)"

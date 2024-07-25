@@ -22,9 +22,10 @@
 
 #include "file.h"
 
-#define NKERNEL_PROC 5
+#define NKERNEL_PROC 6
 char* kernel_processes[] = {
                             "../build/release/grass.elf",
+                            "../build/release/loader.elf",
                             "../build/release/sys_proc.elf",
                             "../build/release/sys_file.elf",
                             "../build/release/sys_dir.elf",
