@@ -64,14 +64,17 @@ page_table *pid_root_pagetable[NENTR]; /* Points to Root PT */
 
 /* Update PTE from pagetable, or create new PTE if invalid */
 pte pagetable_update_pte(int pid, page_table *ptbl, uint vpn, uint ppn, int rwx, int pin) {
-  pte pte = ptbl->table[vpn];
+    pte pte = ptbl->table[vpn];
 
-  if ((pte & 0x1) == 0 && ppn == (uint)NULL)
-    /* Invalid PTE */
-    ppn = (uint)frame_acquire(pid, pin) >> 12;
+    /* Don't care where PTE is mapped, reuse pte or acquire new frame */
+    if (ppn == (uint)NULL) {
+        if (pte & 0x1) 
+            return pte;
+        ppn = (uint)frame_acquire(pid, pin) >> 12;
+    }
 
-  ptbl->table[vpn] |= (ppn << 10) | rwx | 0x1;
-  return ptbl->table[vpn];
+    ptbl->table[vpn] = (ppn << 10) | rwx | 0x1;
+    return ptbl->table[vpn];
 }
 
 /* 
@@ -79,29 +82,45 @@ pte pagetable_update_pte(int pid, page_table *ptbl, uint vpn, uint ppn, int rwx,
         Maps VADDR to PADDR in PID's Page Table. 
         If PADDR == NULL, map VADDR to any page.
 */
-char *pagetable_map(int pid, void *vaddr, void *paddr, int rwx, int pin) {
-  uint vpn1 = ((uint)vaddr >> 22) & VPN_NBITS;
-  uint vpn0 = ((uint)vaddr >> 12) & VPN_NBITS;
-  uint ppn  = ((uint)paddr >> 12);
+char *pagetable_map(int pid, uint vaddr, uint paddr, int rwx, int pin) {
+    uint vpn1 = ((uint)vaddr >> 22) & VPN_NBITS;
+    uint vpn0 = ((uint)vaddr >> 12) & VPN_NBITS;
+    uint ppn  = ((uint)paddr >> 12);
 
-  page_table *leaf, *root = pid_root_pagetable[pid];
-  char *page;
+    page_table *leaf, *root = pid_root_pagetable[pid];
+    char *page;
 
-  if (root == 0)
-    pid_root_pagetable[pid] = root = (page_table *)frame_acquire(pid, pin);
+    if (root == 0)
+        pid_root_pagetable[pid] = root = (page_table *)frame_acquire(pid, pin);
 
-  
-  leaf = (page_table *)((pagetable_update_pte(pid, root, vpn1,   0,   0, pin) << 2) & ~(0xFFF));
-  page =       (char *)((pagetable_update_pte(pid, leaf, vpn0, ppn, rwx, pin) << 2) & ~(0xFFF));
 
-  return page;
+    leaf = (page_table *)((pagetable_update_pte(pid, root, vpn1,   0,   0, pin) << 2) & ~(0xFFF));
+    page =       (char *)((pagetable_update_pte(pid, leaf, vpn0, ppn, rwx, pin) << 2) & ~(0xFFF));
+
+    return page;
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-void mmu_alloc(int pid) {
-    CRITICAL("MAP LOADER START");
-    pagetable_map(pid, (void*)LOADER_PENTRY, (void*)LOADER_PENTRY, RWX, PINNED);
+void mmu_alloc(int pid, void **sc) {
+    /* Map Loader Process' Pages */
+    pagetable_map(pid, LOADER_PENTRY, LOADER_PENTRY, RWX, PINNED);
+
+    for (
+        uint p = LOADER_VSTACK_TOP - (LOADER_VSTACK_NPAGES * PAGE_SIZE); 
+        p < LOADER_VSTACK_TOP; 
+        p += PAGE_SIZE
+    ) {
+        pagetable_map(pid, p, (uint)NULL, RWX, PINNED);
+    }
+
+    /* Map Syscalls, Grass Struct, Earth Struct, and OS */
+    *sc = (void *)pagetable_map(pid, SYSCALL_VARG, (uint)NULL, RWX, PINNED);
+
+    pagetable_map(pid, GRASS_STRUCT_BASE, GRASS_STRUCT_BASE, RWX, PINNED);
+    pagetable_map(pid, EARTH_STRUCT_BASE, EARTH_STRUCT_BASE, RWX, PINNED);
+    for (uint p = GRASS_ENTRY; p < GRASS_ENTRY + GRASS_SIZE; p += PAGE_SIZE)
+        pagetable_map(pid, p, p, RWX, PINNED);
 }
 
 void mmu_switch(int pid) {
@@ -111,7 +130,6 @@ void mmu_switch(int pid) {
           (1 << 31)   /* Mode = Sv32 */
         | (pid << 22) /* ASID = PID  */
         | ((uint)pid_root_pagetable[pid] >> 12); /* PPN */
-    CRITICAL("mmu_switch: satp %x", satp);
     asm("csrw satp, %0"::"r" (satp));
 }
 

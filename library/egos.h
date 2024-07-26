@@ -13,7 +13,7 @@ struct earth {
 
     int (*mmu_free)(int pid);
     int (*mmu_map)(int pid, uint page_no, uint frame_no);
-    void (*mmu_alloc)(int pid);
+    void (*mmu_alloc)(int pid, void **);
     void (*mmu_switch)(int pid);
 
     /* Devices interface */
@@ -49,7 +49,7 @@ struct grass {
     char workdir[128];
 
     /* Process control interface */
-    int  (*proc_alloc)(int parentid);
+    int  (*proc_alloc)(int parentid, void *sc);
     void (*proc_free)(int pid);
     void (*proc_set_ready)(int pid);
 
@@ -70,10 +70,11 @@ extern struct grass *grass;
 #define CORE_MAP_START    0x80040000  /* 112KB  frame cache           */
 #define CORE_MAP_NPAGES   256
                                        /*        earth interface       */
-#define GRASS_STACK_TOP   0x80018000  /* 8KB    earth/grass stack     */
-                                       /*        grass interface       */
-#define APPS_STACK_TOP    0x80020000  /* 6KB    app stack             */
-#define SYSCALL_ARG       0x80000400  /* 1KB    system call args      */
+#define EARTH_STRUCT_BASE 0x80010000  
+#define GRASS_STRUCT_BASE 0x80010800
+#define EGOS_STACK_TOP    0x80020000
+
+#define SYSCALL_VARG      0x80000000  /* 1KB    system call args      */
 #define APPS_ARG          0x80000000  /* 1KB    app main() argc, argv */
 #define APPS_SIZE         0x00003000
 #define APPS_ENTRY        0x08005000  /* 12KB   app code+data         */

@@ -21,9 +21,15 @@ struct sys_msg {
     char content[SYSCALL_MSG_LEN];
 };
 
+struct sys_arg {
+    char argv[4][BLOCK_SIZE];
+    uint argc;
+};
+
 struct syscall {
     enum syscall_type type;  /* Type of the system call */
     struct sys_msg msg;      /* Data of the system call */
+    struct sys_arg args;     /* Args of the system call */
     int retval;              /* Return value of the system call */
 };
 

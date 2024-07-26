@@ -20,8 +20,8 @@ void mmu_init();
 void timer_init();
 void intr_init();
 
-struct grass *grass = (void*)APPS_STACK_TOP;
-struct earth *earth = (void*)GRASS_STACK_TOP;
+struct grass *grass = (struct grass *)GRASS_STRUCT_BASE;
+struct earth *earth = (struct earth *)EARTH_STRUCT_BASE;
 extern char bss_start, bss_end, data_rom, data_start, data_end;
 
 static void earth_init() {

@@ -13,7 +13,7 @@
 earth_entry:
     li t0, 0x8         /* The first instruction during boot up */
     csrc mstatus, t0   /* Disable interrupt */
-    li sp, 0x80018000
+    li sp, 0x80020000
     call main
 
 trap_from_S_mode:

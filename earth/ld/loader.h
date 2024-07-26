@@ -10,5 +10,5 @@ struct segment_table {
   struct segment segmentbl[NSEGMENTS];
 };
 
-struct grass *grass = (struct grass *)APPS_STACK_TOP;
-struct earth *earth = (struct earth *)GRASS_STACK_TOP;
+struct grass *grass = (struct grass *)GRASS_STRUCT_BASE;
+struct earth *earth = (struct earth *)EARTH_STRUCT_BASE;

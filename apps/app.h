@@ -3,5 +3,5 @@
 #include "egos.h"
 #include "servers.h"
 
-struct grass *grass = (void*)APPS_STACK_TOP;
-struct earth *earth = (void*)GRASS_STACK_TOP;
+struct grass *grass = (struct grass *)GRASS_STRUCT_BASE;
+struct earth *earth = (struct earth *)EARTH_STRUCT_BASE;

@@ -29,10 +29,19 @@ void kernel_entry(uint is_interrupt, uint id) {
     memcpy(SAVED_REGISTER_ADDR, proc_set[proc_curr_idx].saved_register, SAVED_REGISTER_SIZE);
 }
 
+static void proc_yield();
+static void proc_syscall(struct process *proc);
+
 #define EXCP_ID_ECALL_U    8
 #define EXCP_ID_ECALL_M    11
 
 void excp_entry(uint id) {
+    if (EXCP_ID_ECALL_U <= id && id <= EXCP_ID_ECALL_M) {
+        proc_set[proc_curr_idx].mepc += 4;
+        proc_syscall(&proc_set[proc_curr_idx]);
+        proc_yield();
+        return;
+    }
     /* Student's code goes here (system call and memory exception). */
 
     /* If id is for system call, handle the system call and return */
@@ -44,15 +53,13 @@ void excp_entry(uint id) {
     asm("csrr %0, mepc":"=r"(mepc));
     asm("csrr %0, mtval":"=r"(mtval));
     asm("csrr %0, mstatus":"=r"(mstatus));
-    FATAL("exc %d, mepc: %x, mtval: %x, mstatus: %x", id, mepc, mtval, mstatus);
+    FATAL("exc %d, mepc: %x, mtval: %x, mstatus: %x, val: %x", id, mepc, mtval, mstatus, *((int volatile *)mepc));
 }
 
 #define INTR_ID_SOFT       3
 #define INTR_ID_TIMER      7
 #define INTR_ID_EXTR       11
 
-static void proc_yield();
-static void proc_syscall(struct process *proc);
 static void proc_external();
 static void proc_exit(struct process *proc);
 
@@ -67,8 +74,6 @@ void intr_entry(uint id) {
         return;
     }
 
-    /* Ignore other interrupts for now */
-    if (id == INTR_ID_SOFT) proc_syscall(&proc_set[proc_curr_idx]);
     if (id == INTR_ID_EXTR) proc_external();
     proc_yield();
 }
@@ -203,6 +208,7 @@ static void proc_exit(struct process *proc) {
 }
 
 static int proc_disk(struct syscall *sc) {
+    FATAL("proc_disk");
     void *msg = (void *)sc->msg.content;
 
     uint block_no, nblocks;
@@ -221,12 +227,11 @@ static int proc_disk(struct syscall *sc) {
 }
 
 static int proc_tty(struct syscall *sc) {
-    void *msg = (void *)sc->msg.content;
-    char *buf; uint len;
+    if (sc->type == TTY_READ) FATAL("proc_tty");
+    char *buf = sc->args.argv[0];
+    uint len;
 
-    memcpy(&buf, msg, sizeof(buf));
-    msg += sizeof(buf);
-    memcpy(&len, msg, sizeof(len));
+    memcpy(&len, sc->args.argv[1], sizeof(len));
 
     if (sc->type == TTY_READ)
         return earth->tty_read(buf);
@@ -234,10 +239,8 @@ static int proc_tty(struct syscall *sc) {
 }
 
 static void proc_syscall(struct process *proc) {
-    struct syscall *sc = (struct syscall*)SYSCALL_ARG;
+    struct syscall *sc = proc->sc;
     int rc;
-
-    *((int*)MSIP) = 0;
 
     switch (sc->type) {
     case SYS_RECV:

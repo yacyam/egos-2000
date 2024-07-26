@@ -15,7 +15,7 @@ enum proc_status {
 
 #define SAVED_REGISTER_NUM  29
 #define SAVED_REGISTER_SIZE SAVED_REGISTER_NUM * sizeof(uint)
-#define SAVED_REGISTER_ADDR (void*)(GRASS_STACK_TOP - SAVED_REGISTER_SIZE)
+#define SAVED_REGISTER_ADDR (void*)(EGOS_STACK_TOP - SAVED_REGISTER_SIZE)
 
 struct process{
     int pid;
@@ -24,6 +24,7 @@ struct process{
     uint mepc, saved_register[SAVED_REGISTER_NUM];
     enum syscall_type pending_syscall;
     int receive_from;
+    struct syscall *sc;
 };
 
 #define MAX_NPROCESS  8
@@ -36,7 +37,7 @@ void intr_entry(uint);
 void excp_entry(uint);
 void kernel_entry(uint, uint);
 
-int  proc_alloc(int);
+int  proc_alloc(int, void *);
 void proc_free(int);
 void proc_set_ready (int);
 void proc_set_running (int);

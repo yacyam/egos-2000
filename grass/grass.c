@@ -13,8 +13,8 @@
 #include "syscall.h"
 #include "process.h"
 
-struct grass *grass = (void*)APPS_STACK_TOP;
-struct earth *earth = (void*)GRASS_STACK_TOP;
+struct grass *grass = (void*)GRASS_STRUCT_BASE;
+struct earth *earth = (void*)EARTH_STRUCT_BASE;
 
 static int loader_read(uint block_no, char* dst) {
     earth->kernel_disk_read(LOADER_EXEC_START + block_no, 1, dst);
@@ -23,6 +23,7 @@ static int loader_read(uint block_no, char* dst) {
 
 int main() {
     CRITICAL("Enter the grass layer");
+    void *sc;
 
     /* Initialize the grass interface functions */
     grass->proc_alloc = proc_alloc;
@@ -46,9 +47,10 @@ int main() {
     /* Load the first kernel process GPID_PROCESS */
     INFO("Load kernel process #%d: sys_proc", GPID_PROCESS);
     elf_load(GPID_PROCESS, loader_read, 0, 0);
-    proc_set_running(proc_alloc(GPID_UNUSED));
-    earth->mmu_alloc(GPID_PROCESS);
+
+    earth->mmu_alloc(GPID_PROCESS, &sc);
     earth->mmu_switch(GPID_PROCESS);
+    proc_set_running(proc_alloc(GPID_UNUSED, sc));
 
     grass->mode = MODE_USER;
     /* Jump to the entry of process GPID_PROCESS's Loader */

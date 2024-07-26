@@ -60,7 +60,9 @@ static int app_spawn(struct proc_request *req, int parent) {
     int bin_ino = dir_lookup(0, "bin/");
     if ((app_ino = dir_lookup(bin_ino, req->argv[0])) < 0) return -1;
 
-    app_pid = grass->proc_alloc(parent);
+
+    FATAL("GPID_PROC::: APP_SPAWN");
+    //app_pid = grass->proc_alloc(parent);
 
     if (app_pid < 0) FATAL("Reached Maximum Number of Processes");
 
@@ -79,7 +81,9 @@ static int sys_proc_read(uint block_no, char* dst) {
 }
 
 static void sys_spawn(uint base) {
-    int pid = grass->proc_alloc(GPID_PROCESS);
+    FATAL("GPID_PROC::: SYS_SPAWN");
+    int pid;
+    //int pid = grass->proc_alloc(GPID_PROCESS);
     INFO("Load kernel process #%d: %s", pid, sysproc_names[pid - 1]);
 
     sys_proc_base = base;
