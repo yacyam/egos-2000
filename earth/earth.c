@@ -60,7 +60,7 @@ int main() {
     uint M_MODE = 3, S_MODE = 1; /* U_MODE = 0 */
     uint GRASS_MODE = S_MODE;
     asm("csrr %0, mstatus" : "=r"(mstatus));
-    asm("csrw mstatus, %0" ::"r"((mstatus & ~(3 << 11)) | (GRASS_MODE << 11)));
+    asm("csrw mstatus, %0" ::"r"((mstatus & ~(3 << 11)) | (GRASS_MODE << 11) | (1 << 18)));
 
     asm("jr %0" ::"r"(GRASS_ENTRY));
 }

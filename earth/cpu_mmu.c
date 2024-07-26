@@ -66,9 +66,9 @@ page_table *pid_root_pagetable[NENTR]; /* Points to Root PT */
 pte pagetable_update_pte(int pid, page_table *ptbl, uint vpn, uint ppn, int rwx, int pin) {
   pte pte = ptbl->table[vpn];
 
-  if ((pte & 0x1) == 0 && ppn == NULL)
+  if ((pte & 0x1) == 0 && ppn == (uint)NULL)
     /* Invalid PTE */
-    ppn = (uint)frame_acquire(pid, pin) >> PAGE_OFF;
+    ppn = (uint)frame_acquire(pid, pin) >> 12;
 
   ptbl->table[vpn] |= (ppn << 10) | rwx | 0x1;
   return ptbl->table[vpn];
@@ -80,9 +80,9 @@ pte pagetable_update_pte(int pid, page_table *ptbl, uint vpn, uint ppn, int rwx,
         If PADDR == NULL, map VADDR to any page.
 */
 char *pagetable_map(int pid, void *vaddr, void *paddr, int rwx, int pin) {
-  uint vpn1 = ((uint)vaddr >> (PAGE_OFF + VPN_NBITS)) & VPN_NBITS;
-  uint vpn0 = ((uint)vaddr >> PAGE_OFF)               & VPN_NBITS;
-  uint ppn  = ((uint)paddr >> PAGE_OFF);
+  uint vpn1 = ((uint)vaddr >> 22) & VPN_NBITS;
+  uint vpn0 = ((uint)vaddr >> 12) & VPN_NBITS;
+  uint ppn  = ((uint)paddr >> 12);
 
   page_table *leaf, *root = pid_root_pagetable[pid];
   char *page;
@@ -91,7 +91,7 @@ char *pagetable_map(int pid, void *vaddr, void *paddr, int rwx, int pin) {
     pid_root_pagetable[pid] = root = (page_table *)frame_acquire(pid, pin);
 
   
-  leaf = (page_table *)((pagetable_update_pte(pid, root, vpn1, NULL,  0, pin) << 2) & ~(0xFFF));
+  leaf = (page_table *)((pagetable_update_pte(pid, root, vpn1,   0,   0, pin) << 2) & ~(0xFFF));
   page =       (char *)((pagetable_update_pte(pid, leaf, vpn0, ppn, rwx, pin) << 2) & ~(0xFFF));
 
   return page;
@@ -117,7 +117,10 @@ void mmu_switch(int pid) {
 
 /* MMU Initialization */
 void mmu_init() {
+    /* Instruction Access Fault on Virtual Memory without PMPCFG0 Set */
+    asm("csrw pmpaddr0, %0" : : "r" (0x40000000));
+    asm("csrw pmpcfg0, %0" : : "r" (0xF));
+    
     earth->mmu_alloc = mmu_alloc;
     earth->mmu_switch = mmu_switch;
-
 }

@@ -65,14 +65,9 @@ void intr_init() {
     earth->trap_external = trap_external;
 
     /* Setup the interrupt/exception entry function */
-    if (earth->translation == PAGE_TABLE) {
-        asm("csrw mtvec, %0" ::"r"(trap_from_S_mode));
-        INFO("Use direct mode and put the address of trap_entry_S_mode() to mtvec");
-    } else {
-        asm("csrw mtvec, %0" ::"r"(trap_from_M_mode));
-        INFO("Use direct mode and put the address of trap_entry_M_mode() to mtvec");
-    }
-
+    asm("csrw mtvec, %0" ::"r"(trap_from_M_mode));
+    INFO("Use direct mode and put the address of trap_entry_M_mode() to mtvec");
+    
     /* Enable the machine-mode timer, software, and external interrupts */
     uint mstatus, mie;
     asm("csrr %0, mie" : "=r"(mie));
