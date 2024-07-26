@@ -1,5 +1,8 @@
 #include "egos.h"
-#define NSEGMENTS 5
+#define NMAX_SEGMENTS 5
+
+struct grass *grass = (struct grass *)GRASS_STRUCT_BASE;
+struct earth *earth = (struct earth *)EARTH_STRUCT_BASE;
 
 struct segment {
   void *base_vaddr;
@@ -7,8 +10,9 @@ struct segment {
 };
 
 struct segment_table {
-  struct segment segmentbl[NSEGMENTS];
+  uint nsegments;
+  struct segment segments[NMAX_SEGMENTS];
 };
 
-struct grass *grass = (struct grass *)GRASS_STRUCT_BASE;
-struct earth *earth = (struct earth *)EARTH_STRUCT_BASE;
+struct segment_table *segtbl = 
+  (struct segment_table *) (LOADER_VSTACK_TOP - LOADER_VSTACK_NPAGES * PAGE_SIZE);

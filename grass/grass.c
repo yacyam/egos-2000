@@ -52,6 +52,7 @@ int main() {
     earth->mmu_switch(GPID_PROCESS);
     proc_set_running(proc_alloc(GPID_UNUSED, sc));
 
+    CRITICAL("Enter GPID_PROCESS's Loader");
     grass->mode = MODE_USER;
     /* Jump to the entry of process GPID_PROCESS's Loader */
     asm("csrw mepc, %0" ::"r"(LOADER_PENTRY));

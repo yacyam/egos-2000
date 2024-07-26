@@ -105,7 +105,6 @@ char *pagetable_map(int pid, uint vaddr, uint paddr, int rwx, int pin) {
 void mmu_alloc(int pid, void **sc) {
     /* Map Loader Process' Pages */
     pagetable_map(pid, LOADER_PENTRY, LOADER_PENTRY, RWX, PINNED);
-
     for (
         uint p = LOADER_VSTACK_TOP - (LOADER_VSTACK_NPAGES * PAGE_SIZE); 
         p < LOADER_VSTACK_TOP; 
@@ -114,12 +113,17 @@ void mmu_alloc(int pid, void **sc) {
         pagetable_map(pid, p, (uint)NULL, RWX, PINNED);
     }
 
-    /* Map Syscalls, Grass Struct, Earth Struct, and OS */
+    /* Map Syscalls, Grass Struct, Earth Struct, OS, and ROM */
     *sc = (void *)pagetable_map(pid, SYSCALL_VARG, (uint)NULL, RWX, PINNED);
 
     pagetable_map(pid, GRASS_STRUCT_BASE, GRASS_STRUCT_BASE, RWX, PINNED);
     pagetable_map(pid, EARTH_STRUCT_BASE, EARTH_STRUCT_BASE, RWX, PINNED);
-    for (uint p = GRASS_ENTRY; p < GRASS_ENTRY + GRASS_SIZE; p += PAGE_SIZE)
+    /* OS */
+    for (uint p = EARTH_ENTRY; p < EARTH_ENTRY + GRASS_SIZE + EARTH_SIZE; p += PAGE_SIZE)
+        pagetable_map(pid, p, p, RWX, PINNED);
+    
+    /* ROM */
+    for (uint p = ROM_START; p < ROM_START + ROM_SIZE; p += PAGE_SIZE)
         pagetable_map(pid, p, p, RWX, PINNED);
 }
 

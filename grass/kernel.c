@@ -208,22 +208,15 @@ static void proc_exit(struct process *proc) {
 }
 
 static int proc_disk(struct syscall *sc) {
-    FATAL("proc_disk");
-    void *msg = (void *)sc->msg.content;
+    if (sc->type == DISK_WRITE) FATAL("proc_disk");
 
     uint block_no, nblocks;
-    char *buf;
-
-    memcpy(&block_no, msg, sizeof(block_no));
-    msg += sizeof(block_no);
-    memcpy(&nblocks, msg, sizeof(nblocks));
-    msg += sizeof(nblocks);
-    memcpy(&buf, msg, sizeof(buf));
-
+    memcpy(&block_no, sc->args.argv[0], sizeof(block_no));
+    memcpy(&nblocks,  sc->args.argv[1], sizeof(nblocks));
     if (sc->type == DISK_READ)
-        return earth->disk_read(block_no, nblocks, buf);
+        return earth->disk_read(block_no, nblocks, sc->msg.content);
 
-    return earth->disk_write(block_no, nblocks, buf);
+    return earth->disk_write(block_no, nblocks, sc->msg.content);
 }
 
 static int proc_tty(struct syscall *sc) {

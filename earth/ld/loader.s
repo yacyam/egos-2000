@@ -2,4 +2,4 @@
   .global loader_entry
 
 loader_entry:
-  call initialization
+  call loader_init

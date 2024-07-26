@@ -17,6 +17,10 @@ static void sys_invoke() {
     asm("ecall");
 }
 
+void sys_args(void *arg1, ...) {
+    
+}
+
 int sys_send(int receiver, char* msg, uint size) {
     if (size > SYSCALL_MSG_LEN) return -1;
 
@@ -39,20 +43,17 @@ int sys_recv(int from, int* sender, char* buf, uint size) {
 }
 
 int sys_disk(uint block_no, uint nblocks, char* buf, int rw) {
-    void *msg = (void *)sc->msg.content;
-
-    FATAL("sys_disk");
-
     sc->type = (rw == IO_READ) ? DISK_READ : DISK_WRITE;
+    sc->args.argc = 2;
+    memcpy(sc->args.argv[0], &block_no, sizeof(block_no));
+    memcpy(sc->args.argv[1], &nblocks,  sizeof(nblocks));
     sys_invoke();
-
+    memcpy(buf, sc->msg.content, BLOCK_SIZE);
     return sc->retval;
 }
 
 int sys_tty(char *buf, uint len, int rw) {
-    if (rw == IO_READ) FATAL("sys_tty");
-
-    sc->type = TTY_WRITE;
+    sc->type = (rw == IO_READ) ? TTY_READ : TTY_WRITE;
     memcpy(sc->args.argv[0], buf, len);
     memcpy(sc->args.argv[1], &len, sizeof(len));
     sc->args.argc = 2;
