@@ -17,13 +17,6 @@ earth_entry:
     call main
 
 trap_from_S_mode:
-    /* Set mstatus.MPRV to enable page table translation in M mode */
-    /* If mstatus.MPP is U mode, set to S mode for kernel privilege */
-    csrw mscratch, t0
-    li t0, 0x20800
-    csrs mstatus, t0
-    csrr t0, mscratch
-
 trap_from_M_mode:
     /* Step1: switch to the kernel stack
        Step2: save all registers on the kernel stack

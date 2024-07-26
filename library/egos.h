@@ -11,12 +11,10 @@ struct earth {
     int (*kernel_entry_init)(void (*entry)(uint, uint));
     int (*trap_external)();
 
-    int (*mmu_alloc)(int pid, uint* frame_no, void** cached_addr);
     int (*mmu_free)(int pid);
     int (*mmu_map)(int pid, uint page_no, uint frame_no);
-    int (*mmu_switch)(int pid);
-    void (*mmu_pin)(int pid, int frame_no);
-    void (*mmu_unpin)(int pid, int frame_no);
+    void (*mmu_alloc)(int pid);
+    void (*mmu_switch)(int pid);
 
     /* Devices interface */
     int  (*disk_read)(uint block_no, uint nblocks, char* dst);
@@ -69,8 +67,8 @@ extern struct grass *grass;
 
 /* Memory layout */
 #define PAGE_SIZE         4096
-#define FRAME_CACHE_END   0x80020000
-#define FRAME_CACHE_START 0x80004000  /* 112KB  frame cache           */
+#define CORE_MAP_START    0x80040000  /* 112KB  frame cache           */
+#define CORE_MAP_NPAGES   256
                                        /*        earth interface       */
 #define GRASS_STACK_TOP   0x80018000  /* 8KB    earth/grass stack     */
                                        /*        grass interface       */

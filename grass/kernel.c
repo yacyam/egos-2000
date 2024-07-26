@@ -40,7 +40,11 @@ void excp_entry(uint id) {
     /* Otherwise, kill the process if curr_pid is a user application */
 
     /* Student's code ends here. */
-    FATAL("exc %d", id);
+    uint mepc, mtval, mstatus;
+    asm("csrr %0, mepc":"=r"(mepc));
+    asm("csrr %0, mtval":"=r"(mtval));
+    asm("csrr %0, mstatus":"=r"(mstatus));
+    FATAL("exc %d, mepc: %x, mtval: %x, mstatus: %x", id, mepc, mtval, mstatus);
 }
 
 #define INTR_ID_SOFT       3

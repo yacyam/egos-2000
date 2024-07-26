@@ -16,8 +16,8 @@
 struct grass *grass = (void*)APPS_STACK_TOP;
 struct earth *earth = (void*)GRASS_STACK_TOP;
 
-static int sys_proc_read(uint block_no, char* dst) {
-    earth->kernel_disk_read(SYS_PROC_EXEC_START + block_no, 1, dst);
+static int loader_read(uint block_no, char* dst) {
+    earth->kernel_disk_read(LOADER_EXEC_START + block_no, 1, dst);
     return 0;
 }
 
@@ -45,13 +45,14 @@ int main() {
     
     /* Load the first kernel process GPID_PROCESS */
     INFO("Load kernel process #%d: sys_proc", GPID_PROCESS);
-    elf_load(GPID_PROCESS, sys_proc_read, 0, 0);
+    elf_load(GPID_PROCESS, loader_read, 0, 0);
     proc_set_running(proc_alloc(GPID_UNUSED));
+    earth->mmu_alloc(GPID_PROCESS);
     earth->mmu_switch(GPID_PROCESS);
 
     grass->mode = MODE_USER;
-    /* Jump to the entry of process GPID_PROCESS */
-    asm("mv a0, %0" ::"r" (APPS_ARG));
-    asm("csrw mepc, %0" ::"r"(APPS_ENTRY));
+    /* Jump to the entry of process GPID_PROCESS's Loader */
+    asm("csrw mepc, %0" ::"r"(LOADER_PENTRY));
+    asm("mv sp, %0"::"r"(LOADER_VSTACK_TOP));
     asm("mret");
 }
