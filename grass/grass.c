@@ -36,6 +36,7 @@ int main() {
     grass->sys_recv = sys_recv;
     grass->sys_disk = sys_disk;
     grass->sys_tty  = sys_tty;
+    grass->sys_vm_map = sys_vm_map;
 
     /* Register the kernel entry */
     earth->kernel_entry_init(kernel_entry);

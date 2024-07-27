@@ -25,8 +25,7 @@ trap_from_M_mode:
        Step5: switch back to the user stack
        Step6: invoke the mret instruction*/
     csrw mscratch, sp  /* Step1 */
-    lui sp, 0x80004
-    addi sp, sp, -128  /* Kernel stack is 0x80003f80 */
+    lui sp, 0x80020
     addi sp, sp, -116  /* Step2 */
     sw ra, 0(sp)
     sw t0, 4(sp)

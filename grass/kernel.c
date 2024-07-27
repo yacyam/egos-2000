@@ -35,10 +35,27 @@ static void proc_syscall(struct process *proc);
 #define EXCP_ID_ECALL_U    8
 #define EXCP_ID_ECALL_M    11
 
+#define EXCP_ID_PF_INSTR   12
+#define EXCP_ID_PF_LOAD    13
+#define EXCP_ID_PF_STORE   15
+
 void excp_entry(uint id) {
+    uint mtval, mepc;
+    asm("csrr %0, mtval":"=r"(mtval));
+    asm("csrr %0, mepc":"=r"(mepc));
     if (EXCP_ID_ECALL_U <= id && id <= EXCP_ID_ECALL_M) {
         proc_set[proc_curr_idx].mepc += 4;
         proc_syscall(&proc_set[proc_curr_idx]);
+        proc_yield();
+        return;
+    }
+
+    if (id == EXCP_ID_PF_INSTR || id == EXCP_ID_PF_STORE) {
+        memcpy(earth->mmu_find(curr_pid, LOADER_VSTATE), &proc_set[proc_curr_idx], sizeof(struct process));
+        proc_set[proc_curr_idx].mepc               = earth->loader_fault;
+        proc_set[proc_curr_idx].saved_register[28] = LOADER_VSTACK_TOP;
+        proc_set[proc_curr_idx].saved_register[8]  = mtval;
+        proc_set[proc_curr_idx].saved_register[9]  = id;
         proc_yield();
         return;
     }
@@ -49,11 +66,7 @@ void excp_entry(uint id) {
     /* Otherwise, kill the process if curr_pid is a user application */
 
     /* Student's code ends here. */
-    uint mepc, mtval, mstatus;
-    asm("csrr %0, mepc":"=r"(mepc));
-    asm("csrr %0, mtval":"=r"(mtval));
-    asm("csrr %0, mstatus":"=r"(mstatus));
-    FATAL("exc %d, mepc: %x, mtval: %x, mstatus: %x, val: %x", id, mepc, mtval, mstatus, *((int volatile *)mepc));
+    FATAL("exc %d, mepc: %x, mtval: %x", id, mepc, mtval);
 }
 
 #define INTR_ID_SOFT       3
@@ -231,6 +244,12 @@ static int proc_tty(struct syscall *sc) {
     return earth->tty_write(buf, len);
 }
 
+static int proc_vm_map(struct syscall *sc, struct process *proc) {
+    uint vaddr;
+    memcpy(&vaddr, sc->args.argv[0], sizeof(vaddr));
+    return earth->mmu_map(proc->pid, vaddr);
+}
+
 static void proc_syscall(struct process *proc) {
     struct syscall *sc = proc->sc;
     int rc;
@@ -248,6 +267,9 @@ static void proc_syscall(struct process *proc) {
     case SYS_EXIT:
         proc_exit(proc);
         return;
+    case VM_MAP:
+        rc = proc_vm_map(sc, proc);
+        break;
     case DISK_READ: case DISK_WRITE:
         rc = proc_disk(sc);
         break;

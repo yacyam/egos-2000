@@ -11,10 +11,11 @@ struct earth {
     int (*kernel_entry_init)(void (*entry)(uint, uint));
     int (*trap_external)();
 
-    int (*mmu_free)(int pid);
-    int (*mmu_map)(int pid, uint page_no, uint frame_no);
-    void (*mmu_alloc)(int pid, void **);
-    void (*mmu_switch)(int pid);
+    void  (*mmu_alloc)(int pid, void **sc);
+    void  (*mmu_switch)(int pid);
+    void  (*mmu_free)(int pid);
+    int   (*mmu_map)(int pid, uint vaddr);
+    char* (*mmu_find)(int pid, uint vaddr);
 
     void (*loader_fault)(uint vaddr, uint type);
 
@@ -57,6 +58,7 @@ struct grass {
 
     /* System call interface */
     void (*sys_exit)(int status);
+    void (*sys_vm_map)(uint vaddr);
     int  (*sys_wait)(int *pid);
     int  (*sys_send)(int pid, char* msg, uint size);
     int  (*sys_recv)(int pid, int* sender, char* buf, uint size);
@@ -93,8 +95,9 @@ extern struct grass *grass;
 
 
 #define LOADER_PENTRY          0x80030000
+#define LOADER_VSTATE          0x80038000
 #define LOADER_VSTACK_TOP      0x80030000
-#define LOADER_VSTACK_NPAGES   4
+#define LOADER_VSTACK_NPAGES   2
 #define LOADER_VSEGMENT_TABLE  LOADER_STACK_TOP - (PAGE_SIZE * LOADER_STACK_NPAGES)
 
 #define STACK_VTOP             0x7FFFFF00

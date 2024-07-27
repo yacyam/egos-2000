@@ -5,13 +5,12 @@ struct grass *grass = (struct grass *)GRASS_STRUCT_BASE;
 struct earth *earth = (struct earth *)EARTH_STRUCT_BASE;
 
 struct segment {
-  void *base_vaddr;
-  uint rwx, memsz, filesz, fileoff;
+  uint base_vaddr, rwx, memsz, filesz, fileoff;
 };
 
 struct segment_table {
-  uint nsegments;
-  struct segment segments[NMAX_SEGMENTS];
+  uint nseg;
+  struct segment seg[NMAX_SEGMENTS];
 };
 
 struct segment_table *segtbl = 

@@ -72,3 +72,9 @@ int sys_wait(int *child_pid) {
     sys_invoke();
     return sc->retval;
 }
+
+void sys_vm_map(uint vaddr) {
+    memcpy(sc->args.argv[0], &vaddr, sizeof(vaddr));
+    sc->type = VM_MAP;
+    sys_invoke();
+}

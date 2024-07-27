@@ -12,6 +12,7 @@ enum syscall_type {
     DISK_WRITE,
     TTY_READ,
     TTY_WRITE,
+    VM_MAP,
 	SYS_NCALLS
 };
 
@@ -44,6 +45,7 @@ struct pending_ipc
 extern struct pending_ipc *pending_ipc_buffer;
 
 void sys_exit(int status);
+void sys_vm_map(uint vaddr);
 int  sys_wait(int *pid);
 int  sys_send(int pid, char* msg, uint size);
 int  sys_recv(int pid, int* sender, char* buf, uint size);

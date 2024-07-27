@@ -105,6 +105,7 @@ char *pagetable_map(int pid, uint vaddr, uint paddr, int rwx, int pin) {
 void mmu_alloc(int pid, void **sc) {
     /* Map Loader Process' Pages */
     pagetable_map(pid, LOADER_PENTRY, LOADER_PENTRY, RWX, PINNED);
+    pagetable_map(pid, LOADER_VSTATE, (uint)NULL,    RWX, PINNED);
     for (
         uint p = LOADER_VSTACK_TOP - (LOADER_VSTACK_NPAGES * PAGE_SIZE); 
         p < LOADER_VSTACK_TOP; 
@@ -137,6 +138,20 @@ void mmu_switch(int pid) {
     asm("csrw satp, %0"::"r" (satp));
 }
 
+void mmu_free(int pid) {
+    FATAL("mmu_free: unimplemented");
+}
+
+char *mmu_find(int pid, uint vaddr) {
+    mmu_switch(pid);
+    return pagetable_map(pid, vaddr, (uint)NULL, RWX, PINNED);
+}
+
+int mmu_map(int pid, uint vaddr) {
+    pagetable_map(pid, vaddr, (uint)NULL, RWX, PINNED);
+    return 0;
+}
+
 /* MMU Initialization */
 void mmu_init() {
     /* Instruction Access Fault on Virtual Memory without PMPCFG0 Set */
@@ -145,4 +160,7 @@ void mmu_init() {
     
     earth->mmu_alloc = mmu_alloc;
     earth->mmu_switch = mmu_switch;
+    earth->mmu_find = mmu_find;
+    earth->mmu_free = mmu_free;
+    earth->mmu_map  = mmu_map;
 }
