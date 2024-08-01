@@ -11,7 +11,7 @@ struct earth {
     int (*kernel_entry_init)(void (*entry)(uint, uint));
     int (*trap_external)();
 
-    void  (*mmu_alloc)(int pid, void **sc);
+    void  (*mmu_alloc)(int pid);
     void  (*mmu_switch)(int pid);
     void  (*mmu_free)(int pid);
     int   (*mmu_map)(int pid, uint vaddr);
@@ -52,7 +52,7 @@ struct grass {
     char workdir[128];
 
     /* Process control interface */
-    int  (*proc_alloc)(int parentid, void *sc);
+    int  (*proc_alloc)(int parentid);
     void (*proc_free)(int pid);
     void (*proc_set_ready)(int pid);
 

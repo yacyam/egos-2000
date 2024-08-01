@@ -23,7 +23,6 @@ static int loader_read(uint block_no, char* dst) {
 
 int main() {
     CRITICAL("Enter the grass layer");
-    void *sc;
 
     /* Initialize the grass interface functions */
     grass->proc_alloc = proc_alloc;
@@ -46,14 +45,14 @@ int main() {
     pending_ipc_buffer->in_use = 0;
     
     /* Load the first kernel process GPID_PROCESS */
-    INFO("Load kernel process #%d: sys_proc", GPID_PROCESS);
-    elf_load(GPID_PROCESS, loader_read, 0, 0);
+    INFO("Load the Loader's Code");
+    elf_load(GPID_ALL, loader_read, 0, 0);
 
-    earth->mmu_alloc(GPID_PROCESS, &sc);
+    earth->mmu_alloc(GPID_PROCESS);
     earth->mmu_switch(GPID_PROCESS);
-    proc_set_running(proc_alloc(GPID_UNUSED, sc));
+    proc_set_running(proc_alloc(GPID_UNUSED));
 
-    CRITICAL("Enter GPID_PROCESS's Loader");
+    CRITICAL("Exit Grass Layer");
     grass->mode = MODE_USER;
     /* Jump to the entry of process GPID_PROCESS's Loader */
     asm("csrw mepc, %0" ::"r"(LOADER_PENTRY));

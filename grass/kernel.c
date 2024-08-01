@@ -50,7 +50,7 @@ void excp_entry(uint id) {
         return;
     }
 
-    if (id == EXCP_ID_PF_INSTR || id == EXCP_ID_PF_STORE) {
+    if (id == EXCP_ID_PF_INSTR || id == EXCP_ID_PF_LOAD || id == EXCP_ID_PF_STORE) {
         memcpy(earth->mmu_find(curr_pid, LOADER_VSTATE), &proc_set[proc_curr_idx], sizeof(struct process));
         proc_set[proc_curr_idx].mepc               = earth->loader_fault;
         proc_set[proc_curr_idx].saved_register[28] = LOADER_VSTACK_TOP;
@@ -153,9 +153,12 @@ static void proc_yield() {
     /* Call the entry point for newly created process */
     if (curr_status == PROC_READY) {
         /* Set argc, argv and initial program counter */
-        proc_set[proc_curr_idx].saved_register[8] = APPS_ARG;
+        earth->mmu_alloc(curr_pid);
+        earth->mmu_switch(curr_pid);
+        proc_set[proc_curr_idx].saved_register[28] = LOADER_VSTACK_TOP;
+        proc_set[proc_curr_idx].saved_register[8] = curr_pid;
         proc_set[proc_curr_idx].saved_register[9] = APPS_ARG + 4;
-        proc_set[proc_curr_idx].mepc = APPS_ENTRY;
+        proc_set[proc_curr_idx].mepc = LOADER_PENTRY;
     }
 
     proc_set_running(curr_pid);
@@ -251,7 +254,7 @@ static int proc_vm_map(struct syscall *sc, struct process *proc) {
 }
 
 static void proc_syscall(struct process *proc) {
-    struct syscall *sc = proc->sc;
+    struct syscall *sc = (void*)earth->mmu_find(proc->pid, SYSCALL_VARG);
     int rc;
 
     switch (sc->type) {

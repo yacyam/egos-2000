@@ -39,15 +39,16 @@ int segtbl_find(uint vaddr) {
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+uint elf_start;
 
 void loader_mret(uint mepc, uint *regs);
 
 int load_server(uint block_no, char *dst) {
-  grass->sys_disk(SYS_PROC_EXEC_START + block_no, 1, dst, IO_READ);
+  grass->sys_disk(elf_start + block_no, 1, dst, IO_READ);
 }
 
 void loader_fault(uint vaddr, uint type) {
-  CRITICAL("FAULT: %x, TYPE: %d", vaddr, type);
+  // CRITICAL("FAULT: %x, TYPE: %d", vaddr, type);
   uint voff, block_no, vpa = vaddr & ~(0xFFF);
   int seg_idx = segtbl_find(vaddr);
 
@@ -55,6 +56,14 @@ void loader_fault(uint vaddr, uint type) {
 
   /* Found Segment; Map Vaddr to arbitrary Physical Frame */
   grass->sys_vm_map(vaddr);
+
+  /***
+   * TODO: Cannot support multiple segments in one page
+   * 
+   * Ex: Page 0x80007000 ===> contains both data & bss section
+   * 
+   * Simple Solution: Require each segment to be page aligned
+   */
   
   /* Load contents into frame */
   if (vaddr - segtbl->seg[seg_idx].base_vaddr <= segtbl->seg[seg_idx].filesz) {
@@ -75,12 +84,19 @@ void loader_fault(uint vaddr, uint type) {
 }
 
 void loader_init(uint ino) {
-  SUCCESS("Initialize GPID PROCESS");
+  CRITICAL("Loader: Initialize Process %d", ino);
+  elf_start = SYS_PROC_EXEC_START;
+ 
+  if (ino == 2)
+    elf_start = SYS_FILE_EXEC_START;
+  if (ino == 3)
+    elf_start = SYS_DIR_EXEC_START;
+  if (ino == 4)
+    elf_start = SYS_SHELL_EXEC_START;
 
   earth->loader_fault = loader_fault;
   void *start = segtbl_init(load_server);
 
-  SUCCESS("Enter GPID PROCESS");
   asm("mv sp, %0"::"r"(STACK_VTOP));
   asm("jr %0"::"r"(start));
 }

@@ -102,7 +102,7 @@ char *pagetable_map(int pid, uint vaddr, uint paddr, int rwx, int pin) {
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-void mmu_alloc(int pid, void **sc) {
+void mmu_alloc(int pid) {
     /* Map Loader Process' Pages */
     pagetable_map(pid, LOADER_PENTRY, LOADER_PENTRY, RWX, PINNED);
     pagetable_map(pid, LOADER_VSTATE, (uint)NULL,    RWX, PINNED);
@@ -115,7 +115,7 @@ void mmu_alloc(int pid, void **sc) {
     }
 
     /* Map Syscalls, Grass Struct, Earth Struct, OS, and ROM */
-    *sc = (void *)pagetable_map(pid, SYSCALL_VARG, (uint)NULL, RWX, PINNED);
+    pagetable_map(pid, SYSCALL_VARG, (uint)NULL, RWX, PINNED);
 
     pagetable_map(pid, GRASS_STRUCT_BASE, GRASS_STRUCT_BASE, RWX, PINNED);
     pagetable_map(pid, EARTH_STRUCT_BASE, EARTH_STRUCT_BASE, RWX, PINNED);

@@ -23,15 +23,13 @@ void proc_set_runnable(int pid) { proc_set_status(pid, PROC_RUNNABLE); }
 void proc_set_pending(int pid) { proc_set_status(pid, PROC_PENDING); }
 void proc_set_zombie(int pid) { proc_set_status(pid, PROC_ZOMBIE); }
 
-int proc_alloc(int parent_pid, void *sc) {
+int proc_alloc(int parent_pid) {
     static uint proc_nprocs = 0;
     for (uint i = 0; i < MAX_NPROCESS; i++)
         if (proc_set[i].status == PROC_UNUSED) {
             proc_set[i].pid = ++proc_nprocs;
             proc_set[i].status = PROC_LOADING;
             proc_set[i].parent_pid = parent_pid;
-
-            proc_set[i].sc = (struct syscall *)sc;
             return proc_nprocs;
         }
 

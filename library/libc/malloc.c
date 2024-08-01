@@ -18,10 +18,13 @@ static char* brk = &__heap_start;
  */
 
 char *_sbrk(int size) {
+    /***
+     * TODO: Support arbitrarily large heap
+     */
     char* heap_end = (&__heap_end);
     if (brk + size > heap_end) {
-        earth->kernel_tty_write("_sbrk: heap grows too large\r\n", 29);
         *(int*)(0xFFFFFFF0) = 1; /* Trigger a memory exception */
+        // earth->kernel_tty_write("_sbrk: heap grows too large\r\n", 29);
     }
 
     char *old_brk = brk;

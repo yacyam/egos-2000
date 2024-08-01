@@ -81,12 +81,7 @@ static int sys_proc_read(uint block_no, char* dst) {
 }
 
 static void sys_spawn(uint base) {
-    FATAL("GPID_PROC::: SYS_SPAWN");
-    int pid;
-    //int pid = grass->proc_alloc(GPID_PROCESS);
+    int pid = grass->proc_alloc(GPID_PROCESS);
     INFO("Load kernel process #%d: %s", pid, sysproc_names[pid - 1]);
-
-    sys_proc_base = base;
-    elf_load(pid, sys_proc_read, 0, NULL);
     grass->proc_set_ready(pid);
 }

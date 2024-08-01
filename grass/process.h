@@ -37,7 +37,7 @@ void intr_entry(uint);
 void excp_entry(uint);
 void kernel_entry(uint, uint);
 
-int  proc_alloc(int, void *);
+int  proc_alloc(int);
 void proc_free(int);
 void proc_set_ready (int);
 void proc_set_running (int);
