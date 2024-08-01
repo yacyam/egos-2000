@@ -17,10 +17,6 @@ static void sys_invoke() {
     asm("ecall");
 }
 
-void sys_args(void *arg1, ...) {
-    
-}
-
 int sys_send(int receiver, char* msg, uint size) {
     if (size > SYSCALL_MSG_LEN) return -1;
 
@@ -67,9 +63,9 @@ void sys_exit(int status) {
 }
 
 int sys_wait(int *child_pid) {
-    memcpy(sc->msg.content, &child_pid, sizeof(child_pid));
     sc->type = SYS_WAIT;
     sys_invoke();
+    memcpy(child_pid, sc->args.argv[0], sizeof(*child_pid));
     return sc->retval;
 }
 

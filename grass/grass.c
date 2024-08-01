@@ -26,6 +26,7 @@ int main() {
 
     /* Initialize the grass interface functions */
     grass->proc_alloc = proc_alloc;
+    grass->proc_init = proc_init;
     grass->proc_free = proc_free;
     grass->proc_set_ready = proc_set_ready;
 
@@ -57,5 +58,7 @@ int main() {
     /* Jump to the entry of process GPID_PROCESS's Loader */
     asm("csrw mepc, %0" ::"r"(LOADER_PENTRY));
     asm("mv sp, %0"::"r"(LOADER_VSTACK_TOP));
+    asm("mv a0, %0"::"r"(GPID_PROCESS));
+    asm("mv a1, zero");
     asm("mret");
 }

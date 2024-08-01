@@ -53,6 +53,7 @@ struct grass {
 
     /* Process control interface */
     int  (*proc_alloc)(int parentid);
+    void (*proc_init)(int pid, uint ino, int argc, void **argv);
     void (*proc_free)(int pid);
     void (*proc_set_ready)(int pid);
 
@@ -79,13 +80,13 @@ extern struct grass *grass;
 #define EGOS_STACK_TOP    0x80020000
 
 #define SYSCALL_VARG      0x80040000  /* 1KB    system call args      */
-#define APPS_ARG          0x80000000  /* 1KB    app main() argc, argv */
+#define APPS_VARG         0x80041000  /* 1KB    app main() argc, argv */
 #define APPS_SIZE         0x00003000
 #define APPS_ENTRY        0x08005000  /* 12KB   app code+data         */
 
 #define EARTH_SIZE        0x00005000
 #define EARTH_ENTRY       0x80000000
-#define GRASS_SIZE        0x00004000
+#define GRASS_SIZE        0x00005000
 #define GRASS_ENTRY       0x80005000  /* 8KB    grass code+data       */
                                        /* 12KB   earth data            */
                                        /* earth code is in QSPI flash  */

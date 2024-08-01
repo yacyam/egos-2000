@@ -13,6 +13,12 @@ enum proc_status {
     PROC_ZOMBIE
 };
 
+struct proc_args {
+    uint ino; /* Inode of Executable*/
+    int argc; /* Number of Args */
+    char argv[CMD_NARGS][CMD_ARG_LEN]; /* Vector of Args */
+};
+
 #define SAVED_REGISTER_NUM  29
 #define SAVED_REGISTER_SIZE SAVED_REGISTER_NUM * sizeof(uint)
 #define SAVED_REGISTER_ADDR (void*)(EGOS_STACK_TOP - SAVED_REGISTER_SIZE)
@@ -21,10 +27,10 @@ struct process{
     int pid;
     int parent_pid;
     enum proc_status status;
+    struct proc_args args;
     uint mepc, saved_register[SAVED_REGISTER_NUM];
     enum syscall_type pending_syscall;
     int receive_from;
-    struct syscall *sc;
 };
 
 #define MAX_NPROCESS  8
@@ -38,6 +44,7 @@ void excp_entry(uint);
 void kernel_entry(uint, uint);
 
 int  proc_alloc(int);
+void proc_init(int, uint, int, void **);
 void proc_free(int);
 void proc_set_ready (int);
 void proc_set_running (int);

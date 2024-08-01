@@ -157,7 +157,7 @@ static void proc_yield() {
         earth->mmu_switch(curr_pid);
         proc_set[proc_curr_idx].saved_register[28] = LOADER_VSTACK_TOP;
         proc_set[proc_curr_idx].saved_register[8] = curr_pid;
-        proc_set[proc_curr_idx].saved_register[9] = APPS_ARG + 4;
+        proc_set[proc_curr_idx].saved_register[9] = &proc_set[proc_curr_idx].args;
         proc_set[proc_curr_idx].mepc = LOADER_PENTRY;
     }
 
@@ -201,12 +201,9 @@ static int proc_recv(struct syscall *sc, struct process *receiver) {
 }
 
 static int proc_wait(struct syscall *sc, struct process *proc) {
-    int *child_pid;
-    memcpy(&child_pid, sc->msg.content, sizeof(child_pid));
-
     for (int i = 0; i < MAX_NPROCESS; i++) {
         if (proc_set[i].parent_pid == proc->pid && proc_set[i].status == PROC_ZOMBIE) {
-            *child_pid = proc_set[i].pid;
+            memcpy(sc->args.argv[0], &proc_set[i].pid, sizeof(proc_set[i].pid));
             proc_free(proc_set[i].pid);
             return 0;    
         }

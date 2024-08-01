@@ -44,6 +44,12 @@ char *frame_acquire(int pid, int pinned) {
   return (char *)CORE_MAP_START + (PAGE_SIZE * free_idx);
 }
 
+void frame_flush(int pid) {
+    for (int i = 0; i < CORE_MAP_NPAGES; i++)
+        if (core_map[i].in_use && core_map[i].pid == pid)
+            core_map[i].in_use = 0;
+}
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define VPN_NBITS    0x3FF
@@ -114,8 +120,9 @@ void mmu_alloc(int pid) {
         pagetable_map(pid, p, (uint)NULL, RWX, PINNED);
     }
 
-    /* Map Syscalls, Grass Struct, Earth Struct, OS, and ROM */
+    /* Map Syscall, Args, Grass/Earth Struct, OS, and ROM */
     pagetable_map(pid, SYSCALL_VARG, (uint)NULL, RWX, PINNED);
+    pagetable_map(pid, APPS_VARG,    (uint)NULL, RWX, PINNED);
 
     pagetable_map(pid, GRASS_STRUCT_BASE, GRASS_STRUCT_BASE, RWX, PINNED);
     pagetable_map(pid, EARTH_STRUCT_BASE, EARTH_STRUCT_BASE, RWX, PINNED);
@@ -139,11 +146,10 @@ void mmu_switch(int pid) {
 }
 
 void mmu_free(int pid) {
-    FATAL("mmu_free: unimplemented");
+    frame_flush(pid);
 }
 
 char *mmu_find(int pid, uint vaddr) {
-    mmu_switch(pid);
     return pagetable_map(pid, vaddr, (uint)NULL, RWX, PINNED);
 }
 

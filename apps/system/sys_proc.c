@@ -61,14 +61,13 @@ static int app_spawn(struct proc_request *req, int parent) {
     if ((app_ino = dir_lookup(bin_ino, req->argv[0])) < 0) return -1;
 
 
-    FATAL("GPID_PROC::: APP_SPAWN");
-    //app_pid = grass->proc_alloc(parent);
+    app_pid = grass->proc_alloc(parent);
 
     if (app_pid < 0) FATAL("Reached Maximum Number of Processes");
 
     int argc = req->argv[req->argc - 1][0] == '&'? req->argc - 1 : req->argc;
 
-    elf_load(app_pid, app_read, argc, (void**)req->argv);
+    grass->proc_init(app_pid, app_ino, argc, (void**)req->argv);
     grass->proc_set_ready(app_pid);
     return 0;
 }
@@ -76,11 +75,8 @@ static int app_spawn(struct proc_request *req, int parent) {
 static int sys_proc_base;
 char* sysproc_names[] = {"sys_proc", "sys_file", "sys_dir", "sys_shell"};
 
-static int sys_proc_read(uint block_no, char* dst) {
-    grass->sys_disk(sys_proc_base + block_no, 1, dst, IO_READ);
-}
-
 static void sys_spawn(uint base) {
+    // TODO: Initialize system processes ?
     int pid = grass->proc_alloc(GPID_PROCESS);
     INFO("Load kernel process #%d: %s", pid, sysproc_names[pid - 1]);
     grass->proc_set_ready(pid);

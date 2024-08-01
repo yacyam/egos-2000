@@ -39,13 +39,15 @@ int segtbl_find(uint vaddr) {
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+elf_reader reader;
 uint elf_start;
+uint elf_ino;
 
 void loader_mret(uint mepc, uint *regs);
 
-int load_server(uint block_no, char *dst) {
-  grass->sys_disk(elf_start + block_no, 1, dst, IO_READ);
-}
+int load_server(uint block_no, char *dst) { grass->sys_disk(elf_start + block_no, 1, dst, IO_READ); }
+int load_app   (uint block_no, char *dst) { file_read(elf_ino, block_no, dst); }
 
 void loader_fault(uint vaddr, uint type) {
   // CRITICAL("FAULT: %x, TYPE: %d", vaddr, type);
@@ -73,7 +75,7 @@ void loader_fault(uint vaddr, uint type) {
     voff = (vpa - (segtbl->seg[seg_idx].base_vaddr)) / BLOCK_SIZE;
     block_no = segtbl->seg[seg_idx].fileoff + voff;
     for (uint p = vpa; p < vpa + PAGE_SIZE; p += BLOCK_SIZE)
-      load_server(block_no++, (char *)p);
+      reader(block_no++, (char *)p);
   } else {
     memset((void*)vpa, 0, PAGE_SIZE);
   }
@@ -83,20 +85,41 @@ void loader_fault(uint vaddr, uint type) {
   loader_mret(p->mepc, p->saved_register);
 }
 
-void loader_init(uint ino) {
-  CRITICAL("Loader: Initialize Process %d", ino);
-  elf_start = SYS_PROC_EXEC_START;
- 
-  if (ino == 2)
-    elf_start = SYS_FILE_EXEC_START;
-  if (ino == 3)
-    elf_start = SYS_DIR_EXEC_START;
-  if (ino == 4)
-    elf_start = SYS_SHELL_EXEC_START;
-
+void loader_init(int pid, struct proc_args *args) {
+  CRITICAL("Loader: Initialize Process %d", pid);
   earth->loader_fault = loader_fault;
-  void *start = segtbl_init(load_server);
+
+  if (pid < GPID_USER_START) {
+    switch (pid) {
+      case GPID_PROCESS:
+        elf_start = SYS_PROC_EXEC_START;  break;
+      case GPID_FILE:
+        elf_start = SYS_FILE_EXEC_START;  break;
+      case GPID_DIR:
+        elf_start = SYS_DIR_EXEC_START;   break;
+      case GPID_SHELL:
+        elf_start = SYS_SHELL_EXEC_START; break;
+    }
+    reader = load_server;
+  }
+  else {
+    elf_ino = args->ino;
+    reader = load_app;
+
+    void **argv_ptrs  = (void**)APPS_VARG;
+    void *argv_start =  (void*)(APPS_VARG + args->argc * sizeof(void*));
+    for (int i = 0; i < args->argc; i++) {
+      memcpy(argv_start, &args->argv[i], sizeof(args->argv[i]));
+      memcpy(argv_ptrs, &argv_start, sizeof(void*));
+      argv_start += sizeof(args->argv[i]);
+      argv_ptrs += sizeof(void*);
+    }
+  }
+
+  void *start = segtbl_init(reader);
 
   asm("mv sp, %0"::"r"(STACK_VTOP));
+  asm("mv a0, %0"::"r"((args ? args->argc : 0)));
+  asm("mv a1, %0"::"r"(APPS_VARG));
   asm("jr %0"::"r"(start));
 }

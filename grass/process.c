@@ -36,6 +36,15 @@ int proc_alloc(int parent_pid) {
     return -1;
 }
 
+void proc_init(int pid, uint ino, int argc, void **argv) {
+    for (uint i = 0; i < MAX_NPROCESS; i++)
+        if (proc_set[i].pid == pid) {
+            proc_set[i].args.ino  = ino;
+            proc_set[i].args.argc = argc;
+            memcpy(proc_set[i].args.argv, argv, sizeof(proc_set[i].args.argv));
+        }
+}
+
 void proc_free(int pid) {
     if (pid != GPID_ALL) {
         earth->mmu_free(pid);
