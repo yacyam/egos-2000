@@ -40,7 +40,6 @@ int sys_recv(int from, int* sender, char* buf, uint size) {
 
 int sys_disk(uint block_no, uint nblocks, char* buf, int rw) {
     sc->type = (rw == IO_READ) ? DISK_READ : DISK_WRITE;
-    sc->args.argc = 2;
     memcpy(sc->args.argv[0], &block_no, sizeof(block_no));
     memcpy(sc->args.argv[1], &nblocks,  sizeof(nblocks));
     sys_invoke();
@@ -50,10 +49,10 @@ int sys_disk(uint block_no, uint nblocks, char* buf, int rw) {
 
 int sys_tty(char *buf, uint len, int rw) {
     sc->type = (rw == IO_READ) ? TTY_READ : TTY_WRITE;
-    memcpy(sc->args.argv[0], buf, len);
-    memcpy(sc->args.argv[1], &len, sizeof(len));
-    sc->args.argc = 2;
+    if (sc->type == TTY_WRITE) memcpy(sc->msg.content,  buf, len);
+    memcpy(sc->args.argv[0], &len, sizeof(len));
     sys_invoke();
+    memcpy(buf, sc->msg.content, len);
     return sc->retval;
 }
 

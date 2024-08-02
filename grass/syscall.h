@@ -24,7 +24,6 @@ struct sys_msg {
 
 struct sys_arg {
     char argv[4][BLOCK_SIZE];
-    uint argc;
 };
 
 struct syscall {

@@ -12,6 +12,13 @@
 #include "app.h"
 #include <stdlib.h>
 
+int sum(int i) {
+    if (i == 0) return 0;
+    return i + sum(i - 1);
+}
+
 int main() {
-    char* heap_overflow = malloc(32 * 1024 * 1024);
+    int s = sum(10000);
+    CRITICAL("SUM: %d", s);
+    //char* heap_overflow = malloc(32 * 1024 * 1024);
 }

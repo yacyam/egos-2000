@@ -50,6 +50,9 @@ int load_server(uint block_no, char *dst) { grass->sys_disk(elf_start + block_no
 int load_app   (uint block_no, char *dst) { file_read(elf_ino, block_no, dst); }
 
 void loader_fault(uint vaddr, uint type) {
+  if (sizeof(struct process) + sizeof(struct syscall) > PAGE_SIZE) 
+    FATAL("loader_fault: process state overflows 1 page");
+  memcpy(LOADER_VSTATE + sizeof(struct process), SYSCALL_VARG, sizeof(struct syscall));
   // CRITICAL("FAULT: %x, TYPE: %d", vaddr, type);
   uint voff, block_no, vpa = vaddr & ~(0xFFF);
   int seg_idx = segtbl_find(vaddr);
@@ -61,9 +64,7 @@ void loader_fault(uint vaddr, uint type) {
 
   /***
    * TODO: Cannot support multiple segments in one page
-   * 
-   * Ex: Page 0x80007000 ===> contains both data & bss section
-   * 
+   * Ex: One Page contains both data & bss section
    * Simple Solution: Require each segment to be page aligned
    */
   
@@ -81,6 +82,7 @@ void loader_fault(uint vaddr, uint type) {
   }
 
   /* Return back to User Context */
+  memcpy(SYSCALL_VARG, LOADER_VSTATE + sizeof(struct process), sizeof(struct syscall));
   struct process *p = (struct process *)LOADER_VSTATE;
   loader_mret(p->mepc, p->saved_register);
 }
@@ -91,14 +93,10 @@ void loader_init(int pid, struct proc_args *args) {
 
   if (pid < GPID_USER_START) {
     switch (pid) {
-      case GPID_PROCESS:
-        elf_start = SYS_PROC_EXEC_START;  break;
-      case GPID_FILE:
-        elf_start = SYS_FILE_EXEC_START;  break;
-      case GPID_DIR:
-        elf_start = SYS_DIR_EXEC_START;   break;
-      case GPID_SHELL:
-        elf_start = SYS_SHELL_EXEC_START; break;
+      case GPID_PROCESS: elf_start = SYS_PROC_EXEC_START;  break;
+      case GPID_FILE:    elf_start = SYS_FILE_EXEC_START;  break;
+      case GPID_DIR:     elf_start = SYS_DIR_EXEC_START;   break;
+      case GPID_SHELL:   elf_start = SYS_SHELL_EXEC_START; break;
     }
     reader = load_server;
   }
@@ -106,7 +104,8 @@ void loader_init(int pid, struct proc_args *args) {
     elf_ino = args->ino;
     reader = load_app;
 
-    void **argv_ptrs  = (void**)APPS_VARG;
+    /* Initialize ARGV of User Process */
+    void *argv_ptrs  =  (void*)APPS_VARG;
     void *argv_start =  (void*)(APPS_VARG + args->argc * sizeof(void*));
     for (int i = 0; i < args->argc; i++) {
       memcpy(argv_start, &args->argv[i], sizeof(args->argv[i]));
@@ -118,8 +117,9 @@ void loader_init(int pid, struct proc_args *args) {
 
   void *start = segtbl_init(reader);
 
+  asm("mv ra, %0"::"r"(start));
   asm("mv sp, %0"::"r"(STACK_VTOP));
   asm("mv a0, %0"::"r"((args ? args->argc : 0)));
   asm("mv a1, %0"::"r"(APPS_VARG));
-  asm("jr %0"::"r"(start));
+  asm("ret");
 }

@@ -4,7 +4,7 @@ ENTRY(loader_entry)
 
 MEMORY 
 {
-  ram (rwx!ia) : ORIGIN = 0x80030000, LENGTH = 0x1000
+  ram (rwx!ia) : ORIGIN = 0x80030000, LENGTH = 0x2000
 }
 
 SECTIONS

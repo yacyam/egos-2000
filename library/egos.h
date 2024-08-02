@@ -72,7 +72,7 @@ extern struct grass *grass;
 
 /* Memory layout */
 #define PAGE_SIZE         4096
-#define CORE_MAP_START    0x80040000  /* 112KB  frame cache           */
+#define CORE_MAP_START    0x80050000  /* 112KB  frame cache           */
 #define CORE_MAP_NPAGES   256
                                        /*        earth interface       */
 #define EARTH_STRUCT_BASE 0x80010000  
@@ -98,8 +98,8 @@ extern struct grass *grass;
 #define LOADER_PENTRY          0x80030000
 #define LOADER_VSTATE          0x80038000
 #define LOADER_VSTACK_TOP      0x80030000
-#define LOADER_VSTACK_NPAGES   2
-#define LOADER_VSEGMENT_TABLE  LOADER_STACK_TOP - (PAGE_SIZE * LOADER_STACK_NPAGES)
+#define LOADER_VSTACK_NPAGES   3
+#define LOADER_VSEGMENT_TABLE  LOADER_STACK_TOP - (PAGE_SIZE * LOADER_VSTACK_NPAGES)
 
 #define STACK_VTOP             0x7FFFFF00
 #define STACK_VBOTTOM          0x30000000

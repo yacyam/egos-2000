@@ -50,6 +50,8 @@ void excp_entry(uint id) {
         return;
     }
 
+    // CRITICAL("MEPC: %x, RA: %x", mepc, proc_set[proc_curr_idx].saved_register[0]);
+
     if (id == EXCP_ID_PF_INSTR || id == EXCP_ID_PF_LOAD || id == EXCP_ID_PF_STORE) {
         memcpy(earth->mmu_find(curr_pid, LOADER_VSTATE), &proc_set[proc_curr_idx], sizeof(struct process));
         proc_set[proc_curr_idx].mepc               = earth->loader_fault;
@@ -233,15 +235,11 @@ static int proc_disk(struct syscall *sc) {
 }
 
 static int proc_tty(struct syscall *sc) {
-    if (sc->type == TTY_READ) FATAL("proc_tty");
-    char *buf = sc->args.argv[0];
+    char *buf = sc->msg.content;
     uint len;
 
-    memcpy(&len, sc->args.argv[1], sizeof(len));
-
-    if (sc->type == TTY_READ)
-        return earth->tty_read(buf);
-    return earth->tty_write(buf, len);
+    memcpy(&len, sc->args.argv[0], sizeof(len));
+    return (sc->type == TTY_WRITE) ? earth->tty_write(buf, len) : earth->tty_read(buf);
 }
 
 static int proc_vm_map(struct syscall *sc, struct process *proc) {

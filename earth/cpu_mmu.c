@@ -13,10 +13,10 @@
 #include "servers.h"
 #include <string.h>
 
-#define NENTR     8
-
 #define PINNED    1
 #define UNPINNED  0
+
+#define PAGE_ID_TO_PADDR(i) (CORE_MAP_START + (i * PAGE_SIZE))
 
 struct frame {
   int in_use, pid, pinned;
@@ -26,28 +26,30 @@ struct frame {
 struct frame core_map[CORE_MAP_NPAGES];
 
 char *frame_acquire(int pid, int pinned) {
-  int free_idx = -1;
+    int free_idx = -1;
 
-  for (int i = 0; i < CORE_MAP_NPAGES; i++)
-    if (!core_map[i].in_use) {
-      free_idx = i;
-      break;
-    }
+    for (int i = 0; i < CORE_MAP_NPAGES; i++)
+        if (!core_map[i].in_use) {
+            free_idx = i;
+            break;
+        }
 
-  if (free_idx == -1) FATAL("acquire_frame: ran out of free frames");
+    if (free_idx == -1) FATAL("acquire_frame: ran out of free frames");
 
-  core_map[free_idx].in_use = 1;
-  core_map[free_idx].pid = pid;
-  core_map[free_idx].pinned = pinned;
+    core_map[free_idx].in_use = 1;
+    core_map[free_idx].pid = pid;
+    core_map[free_idx].pinned = pinned;
 
-  /* Ith core map entry corresponds to Ith page in RAM */
-  return (char *)CORE_MAP_START + (PAGE_SIZE * free_idx);
+    /* Ith core map entry corresponds to Ith page in RAM */
+    return (char *)PAGE_ID_TO_PADDR(free_idx);
 }
 
 void frame_flush(int pid) {
     for (int i = 0; i < CORE_MAP_NPAGES; i++)
-        if (core_map[i].in_use && core_map[i].pid == pid)
+        if (core_map[i].in_use && core_map[i].pid == pid) {
             core_map[i].in_use = 0;
+            memset((void*)PAGE_ID_TO_PADDR(i), 0, PAGE_SIZE);
+        }
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -66,7 +68,7 @@ struct _page_table {
 } typedef page_table;
 
 /* Page Tables: 2 Levels */
-page_table *pid_root_pagetable[NENTR]; /* Points to Root PT */
+page_table *pid_root_pagetable[32]; /* Points to Root PT */
 
 /* Update PTE from pagetable, or create new PTE if invalid */
 pte pagetable_update_pte(int pid, page_table *ptbl, uint vpn, uint ppn, int rwx, int pin) {
@@ -110,7 +112,8 @@ char *pagetable_map(int pid, uint vaddr, uint paddr, int rwx, int pin) {
 
 void mmu_alloc(int pid) {
     /* Map Loader Process' Pages */
-    pagetable_map(pid, LOADER_PENTRY, LOADER_PENTRY, RWX, PINNED);
+    pagetable_map(pid, LOADER_PENTRY,             LOADER_PENTRY,             RWX, PINNED);
+    pagetable_map(pid, LOADER_PENTRY + PAGE_SIZE, LOADER_PENTRY + PAGE_SIZE, RWX, PINNED);
     pagetable_map(pid, LOADER_VSTATE, (uint)NULL,    RWX, PINNED);
     for (
         uint p = LOADER_VSTACK_TOP - (LOADER_VSTACK_NPAGES * PAGE_SIZE); 
@@ -136,7 +139,7 @@ void mmu_alloc(int pid) {
 }
 
 void mmu_switch(int pid) {
-    if (pid >= NENTR) FATAL("mmu_switch::: pid_root_pagetable full");
+    if (pid >= 32) FATAL("mmu_switch::: pid_root_pagetable full");
 
     uint satp = 
           (1 << 31)   /* Mode = Sv32 */
