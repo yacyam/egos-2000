@@ -171,7 +171,7 @@ static int proc_send(struct syscall *sc, struct process *sender) {
     
     for (uint i = 0; i < MAX_NPROCESS; i++) {
         struct process dst = proc_set[i];
-        if (dst.pid == sc->msg.receiver) {
+        if (dst.pid == sc->msg.receiver && !(dst.status == PROC_UNUSED || dst.status == PROC_ZOMBIE)) {
             /* Destination is not receiving, or will not take msg from sender */
             if (! (dst.status == PROC_PENDING && dst.pending_syscall == SYS_RECV) ) return -1;
             if (! (dst.receive_from == GPID_ALL || dst.receive_from == sender->pid) ) return -1;
@@ -184,7 +184,7 @@ static int proc_send(struct syscall *sc, struct process *sender) {
             return 0;
         }
     }
-
+    INFO("proc_send: process %d sending to dead process %d", sender->pid, sc->msg.receiver);
     return -2; // Error, receiver does not exist
 }
 
@@ -192,8 +192,9 @@ static int proc_recv(struct syscall *sc, struct process *receiver) {
     receiver->receive_from = sc->msg.sender;
     
     /* No Message Available, or not for Current Process */
-    if (pending_ipc_buffer->in_use == 0 || pending_ipc_buffer->receiver != receiver->pid) 
+    if (pending_ipc_buffer->in_use == 0 || pending_ipc_buffer->receiver != receiver->pid) {
         return -1; 
+    }
 
     memcpy(sc->msg.content, pending_ipc_buffer->msg, sizeof(sc->msg.content));
     sc->msg.sender = pending_ipc_buffer->sender;

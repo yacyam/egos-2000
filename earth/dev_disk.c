@@ -71,6 +71,9 @@ int disk_read(uint block_no, uint nblocks, char* dst) {
         return 0;
     } 
 
+    if (disk_cmd.state == DISK_FINISHED && disk_cmd.block_no != block_no)
+        CRITICAL("BLOCKED!!!");
+
     if (disk_cmd.state == DISK_IDLE && sd_start_cmd(block_no, SD_CMD_READ) == 0) {
         disk_cmd.block_no = block_no;
         disk_cmd.state = DISK_RUNNING;

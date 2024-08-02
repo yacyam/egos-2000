@@ -60,7 +60,6 @@ static int app_spawn(struct proc_request *req, int parent) {
     int bin_ino = dir_lookup(0, "bin/");
     if ((app_ino = dir_lookup(bin_ino, req->argv[0])) < 0) return -1;
 
-
     app_pid = grass->proc_alloc(parent);
 
     if (app_pid < 0) FATAL("Reached Maximum Number of Processes");

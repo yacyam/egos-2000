@@ -48,7 +48,7 @@ void frame_flush(int pid) {
     for (int i = 0; i < CORE_MAP_NPAGES; i++)
         if (core_map[i].in_use && core_map[i].pid == pid) {
             core_map[i].in_use = 0;
-            memset((void*)PAGE_ID_TO_PADDR(i), 0, PAGE_SIZE);
+            memset((void*)PAGE_ID_TO_PADDR(i), 0, PAGE_SIZE); // MUST 0 out for Page Table Pages
         }
 }
 
