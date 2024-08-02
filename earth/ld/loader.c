@@ -50,9 +50,8 @@ int load_server(uint block_no, char *dst) { grass->sys_disk(elf_start + block_no
 int load_app   (uint block_no, char *dst) { file_read(elf_ino, block_no, dst); }
 
 void loader_fault(uint vaddr, uint type) {
-  if (sizeof(struct process) + sizeof(struct syscall) > PAGE_SIZE) 
-    FATAL("loader_fault: process state overflows 1 page");
-  memcpy(LOADER_VSTATE + sizeof(struct process), SYSCALL_VARG, sizeof(struct syscall));
+  if (sizeof(struct process) + sizeof(struct syscall) > PAGE_SIZE) FATAL("loader_fault: process state overflows 1 page");
+  memcpy((void*)LOADER_VSTATE + sizeof(struct process), (void*)SYSCALL_VARG, sizeof(struct syscall));
   // CRITICAL("FAULT: %x, TYPE: %d", vaddr, type);
   uint voff, block_no, vpa = vaddr & ~(0xFFF);
   int seg_idx = segtbl_find(vaddr);
@@ -82,7 +81,7 @@ void loader_fault(uint vaddr, uint type) {
   }
 
   /* Return back to User Context */
-  memcpy(SYSCALL_VARG, LOADER_VSTATE + sizeof(struct process), sizeof(struct syscall));
+  memcpy((void*)SYSCALL_VARG, (void*)LOADER_VSTATE + sizeof(struct process), sizeof(struct syscall));
   struct process *p = (struct process *)LOADER_VSTATE;
   loader_mret(p->mepc, p->saved_register);
 }

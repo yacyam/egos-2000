@@ -17,8 +17,9 @@ int sum(int i) {
     return i + sum(i - 1);
 }
 
-int main() {
-    int s = sum(10000);
+int main(int argc, void **argv) {
+    int num = atoi(argv[1]);
+    int s = sum(argc > 1 ? num : 1000);
     CRITICAL("SUM: %d", s);
     //char* heap_overflow = malloc(32 * 1024 * 1024);
 }
