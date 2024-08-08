@@ -154,7 +154,6 @@ static void proc_yield() {
 
     /* Call the entry point for newly created process */
     if (curr_status == PROC_READY) {
-        /* Set argc, argv and initial program counter */
         earth->mmu_alloc(curr_pid);
         earth->mmu_switch(curr_pid);
         proc_set[proc_curr_idx].saved_register[28] = LOADER_VSTACK_TOP;

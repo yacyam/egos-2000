@@ -1,5 +1,7 @@
 #include "egos.h"
-#define NMAX_SEGMENTS 5
+#include "elf.h"
+#include "disk.h"
+#define MAX_NSEGMENTS 5
 
 struct grass *grass = (struct grass *)GRASS_STRUCT_BASE;
 struct earth *earth = (struct earth *)EARTH_STRUCT_BASE;
@@ -10,8 +12,13 @@ struct segment {
 
 struct segment_table {
   uint nseg;
-  struct segment seg[NMAX_SEGMENTS];
+  struct segment seg[MAX_NSEGMENTS];
 };
 
-struct segment_table *segtbl = 
-  (struct segment_table *) (LOADER_VSTACK_TOP - LOADER_VSTACK_NPAGES * PAGE_SIZE);
+struct elf_data {
+  elf_reader reader;
+  uint offset, ino;
+};
+
+struct segment_table *segtbl = (struct segment_table *)(LOADER_VSTACK_BOTTOM);
+struct elf_data *elf = (struct elf_data *)(LOADER_VSTACK_BOTTOM + sizeof(*segtbl));

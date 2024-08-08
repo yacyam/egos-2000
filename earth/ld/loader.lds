@@ -17,14 +17,4 @@ SECTIONS
       *(.rdata)
       *(.rodata .rodata.*)
   } >ram
-
-  .data : ALIGN(8) {
-      *(.data .data.*)
-  } >ram
-
-  .bss (NOLOAD): ALIGN(8) {
-      *(.sbss*)
-      *(.bss .bss.*)
-      *(COMMON)
-  } >ram
 }

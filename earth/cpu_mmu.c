@@ -48,7 +48,8 @@ void frame_flush(int pid) {
     for (int i = 0; i < CORE_MAP_NPAGES; i++)
         if (core_map[i].in_use && core_map[i].pid == pid) {
             core_map[i].in_use = 0;
-            memset((void*)PAGE_ID_TO_PADDR(i), 0, PAGE_SIZE); // MUST 0 out for Page Table Pages
+            /* Must 0 Out for Page Table Pages */
+            memset((void*)PAGE_ID_TO_PADDR(i), 0, PAGE_SIZE);
         }
 }
 
@@ -76,9 +77,8 @@ pte pagetable_update_pte(int pid, page_table *ptbl, uint vpn, uint ppn, int rwx,
 
     /* Don't care where PTE is mapped, reuse pte or acquire new frame */
     if (ppn == (uint)NULL) {
-        if (pte & 0x1) 
-            return pte;
-        ppn = (uint)frame_acquire(pid, pin) >> 12;
+        if (pte & 0x1) ppn = pte >> 10;
+        else           ppn = (uint)frame_acquire(pid, pin) >> 12;
     }
 
     ptbl->table[vpn] = (ppn << 10) | rwx | 0x1;
@@ -114,7 +114,7 @@ void mmu_alloc(int pid) {
     /* Map Loader Process' Pages */
     pagetable_map(pid, LOADER_PENTRY,             LOADER_PENTRY,             RWX, PINNED);
     pagetable_map(pid, LOADER_PENTRY + PAGE_SIZE, LOADER_PENTRY + PAGE_SIZE, RWX, PINNED);
-    pagetable_map(pid, LOADER_VSTATE, (uint)NULL,    RWX, PINNED);
+    pagetable_map(pid, LOADER_VSTATE, (uint)NULL, RWX, PINNED);
     for (
         uint p = LOADER_VSTACK_TOP - (LOADER_VSTACK_NPAGES * PAGE_SIZE); 
         p < LOADER_VSTACK_TOP; 
@@ -123,17 +123,17 @@ void mmu_alloc(int pid) {
         pagetable_map(pid, p, (uint)NULL, RWX, PINNED);
     }
 
-    /* Map Syscall, Args, Grass/Earth Struct, OS, and ROM */
+    /* Map Syscall (args + grass/earth struct), Args, and OS */
     pagetable_map(pid, SYSCALL_VARG, (uint)NULL, RWX, PINNED);
-    pagetable_map(pid, APPS_VARG,    (uint)NULL, RWX, PINNED);
-
     pagetable_map(pid, GRASS_STRUCT_BASE, GRASS_STRUCT_BASE, RWX, PINNED);
     pagetable_map(pid, EARTH_STRUCT_BASE, EARTH_STRUCT_BASE, RWX, PINNED);
+
+    pagetable_map(pid, APPS_VARG,    (uint)NULL, RWX, PINNED);
+
     /* OS */
     for (uint p = EARTH_ENTRY; p < EARTH_ENTRY + GRASS_SIZE + EARTH_SIZE; p += PAGE_SIZE)
         pagetable_map(pid, p, p, RWX, PINNED);
-    
-    /* ROM */
+
     for (uint p = ROM_START; p < ROM_START + ROM_SIZE; p += PAGE_SIZE)
         pagetable_map(pid, p, p, RWX, PINNED);
 }

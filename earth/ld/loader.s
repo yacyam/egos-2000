@@ -1,10 +1,10 @@
   .section .text.enter
-  .global loader_entry, loader_mret
+  .global loader_entry, loader_ret
 
 loader_entry:
   call loader_init
 
-loader_mret:
+loader_ret:
   mv gp, a0
   mv sp, a1
   lw ra, 0(sp)
