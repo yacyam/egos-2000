@@ -48,7 +48,7 @@ void loader_fault(uint vaddr, uint type) {
     FATAL("loader_fault: process state overflows 1 page");
 
   memcpy((void*)LOADER_VSTATE + sizeof(struct process), (void*)SYSCALL_VARG, sizeof(struct syscall));
-  INFO("FAULT: %x, TYPE: %d", vaddr, type);
+  //INFO("FAULT: %x, TYPE: %d", vaddr, type);
   uint voff, block_no, vpa = vaddr & ~(0xFFF);
   int seg_idx = segtbl_find(vaddr);
 
