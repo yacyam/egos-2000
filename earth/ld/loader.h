@@ -17,7 +17,7 @@ struct segment_table {
 
 struct elf_data {
   elf_reader reader;
-  uint offset, ino;
+  uint offset, ino, pid;
 };
 
 struct segment_table *segtbl = (struct segment_table *)(LOADER_VSTACK_BOTTOM);

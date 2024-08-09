@@ -48,7 +48,7 @@ void loader_fault(uint vaddr, uint type) {
     FATAL("loader_fault: process state overflows 1 page");
 
   memcpy((void*)LOADER_VSTATE + sizeof(struct process), (void*)SYSCALL_VARG, sizeof(struct syscall));
-  //INFO("FAULT: %x, TYPE: %d", vaddr, type);
+  INFO("FAULT: %x, TYPE: %d, PID: %d", vaddr, type, elf->pid);
   uint voff, block_no, vpa = vaddr & ~(0xFFF);
   int seg_idx = segtbl_find(vaddr);
 
@@ -85,6 +85,7 @@ void loader_fault(uint vaddr, uint type) {
 void loader_init(int pid, struct proc_args *args) {
   CRITICAL("Loader: Initialize Process %d", pid);
   earth->loader_fault = loader_fault;
+  elf->pid = pid;
 
   if (pid < GPID_USER_START) {
     switch (pid) {
