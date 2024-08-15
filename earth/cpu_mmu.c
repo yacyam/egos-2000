@@ -153,11 +153,11 @@ void mmu_free(int pid) {
 }
 
 char *mmu_find(int pid, uint vaddr) {
-    return pagetable_map(pid, vaddr, (uint)NULL, RWX, PINNED);
+    return pagetable_map(pid, vaddr, (uint)NULL, RWX, UNPINNED);
 }
 
 int mmu_map(int pid, uint vaddr) {
-    pagetable_map(pid, vaddr, (uint)NULL, RWX, PINNED);
+    pagetable_map(pid, vaddr, (uint)NULL, RWX, UNPINNED);
     return 0;
 }
 

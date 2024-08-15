@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #else
 #include "egos.h"
+#include "mem.h"
 #endif
 
 #include "file.h"
@@ -341,14 +342,24 @@ inode_store_t *treedisk_init(inode_store_t *below, uint below_ino){
 
     /* Create the inode store state structure.
      */
-    struct treedisk_state *ts = malloc(sizeof(struct treedisk_state));
+    struct treedisk_state *ts;
+    #ifdef MKFS
+        ts = malloc(sizeof(struct treedisk_state));
+    #else
+        ts = ymalloc(sizeof(struct treedisk_state));
+    #endif
     memset(ts, 0, sizeof(struct treedisk_state));
     ts->below = below;
     ts->below_ino = below_ino;
 
     /* Return a block interface to this inode.
      */
-    inode_store_t *this_bs = malloc(sizeof(inode_store_t));
+    inode_store_t *this_bs;
+    #ifdef MKFS
+        this_bs = malloc(sizeof(inode_store_t));
+    #else
+        this_bs = ymalloc(sizeof(inode_store_t));
+    #endif
     memset(this_bs, 0, sizeof(inode_store_t));
     this_bs->state = ts;
     this_bs->getsize = treedisk_getsize;
