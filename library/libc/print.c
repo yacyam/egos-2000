@@ -17,7 +17,7 @@
 
 #define LOG(x, y)  va_list args; \
                    va_start(args, format); \
-                   char str_formatted[256], str_to_print[256]; \
+                   char str_formatted[512], str_to_print[512]; \
                    uint len = earth->format_to_str(str_formatted, format, args); \
                    strcpy(str_to_print, x); \
                    strcat(str_to_print, str_formatted); \

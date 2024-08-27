@@ -18,7 +18,7 @@ EGOS_DEPS = earth/* grass/* library/egos.h library/*/* Makefile
 
 LDFLAGS = -nostdlib -lc -lgcc
 INCLUDE = -Ilibrary -Ilibrary/elf -Ilibrary/file -Ilibrary/libc -Ilibrary/servers
-CFLAGS = -mabi=ilp32 -Wl,--gc-sections -ffunction-sections -fdata-sections -fdiagnostics-show-option
+CFLAGS = -mabi=ilp32 -Os -Wl,--gc-sections -ffunction-sections -fdata-sections -fdiagnostics-show-option
 DEBUG_FLAGS = --source --all-headers --demangle --line-numbers --wide
 
 USRAPP_ELFS = $(patsubst %.c, $(RELEASE)/%.elf, $(notdir $(wildcard apps/user/*.c)))

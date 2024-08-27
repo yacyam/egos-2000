@@ -16,11 +16,11 @@
 
 /* Mac address, IP address, and UDP port */
 #define LOCAL_MAC {0x10, 0xe2, 0xd5, 0x00, 0x00, 0x00}
-#define DEST_MAC  {0x98, 0x48, 0x27, 0x51, 0x53, 0x1e}
+#define DEST_MAC  {0xF4, 0xD4, 0x88, 0x8B, 0xD0, 0x34}
 
 #define IPTOINT(a, b, c, d) ((a << 24)|(b << 16)|(c << 8)|d)
 static uint local_ip = IPTOINT(192, 168, 1, 50);
-static uint dest_ip  = IPTOINT(192, 168, 0, 212);
+static uint dest_ip  = IPTOINT(192, 168, 1, 179);
 static uint local_udp_port = 8001, dest_udp_port = 8002;
 
 /* bswap converts little-ending encoding to big-ending encoding */
@@ -137,10 +137,11 @@ int main() {
 
         /* Student's code ends here. */
     } else {
+        /*
         char* txbuffer = (void*)(ETHMAC_TX_BUFFER);
         memcpy(txbuffer, &eth_frame, sizeof(struct ethernet_frame));
 
-        /* CRC is another checksum code */
+        // /* CRC is another checksum code
         uint crc, txlen = sizeof(struct ethernet_frame);
         crc = crc32(&txbuffer[8], txlen - 8);
         txbuffer[txlen  ] = (crc & 0xff);
@@ -149,17 +150,41 @@ int main() {
         txbuffer[txlen + 3] = (crc & 0xff000000) >> 24;
         txlen += 4;
 
-        #define ETHMAC_CSR_START_WRITE    0x18
+        while(!(REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_READY)));
+        REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_SLOT_WRITE) = 0; /* ETHMAC provides 2 TX slots 
+                                                          /* txbuffer is TX slot#0 
+                                                          /* TX slot#1 is at 0x90001800 
+        REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_SLOT_LEN_WRITE) = txlen;
+        REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_START_WRITE) = 1;
+        */
+
+       #define ETHMAC_CSR_START_WRITE    0x18
         #define ETHMAC_CSR_READY          0x1C
         #define ETHMAC_CSR_SLOT_WRITE     0x24
         #define ETHMAC_CSR_SLOT_LEN_WRITE 0x28
 
-        while(!(REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_READY)));
-        REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_SLOT_WRITE) = 0; /* ETHMAC provides 2 TX slots */
-                                                          /* txbuffer is TX slot#0 */
-                                                          /* TX slot#1 is at 0x90001800 */
-        REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_SLOT_LEN_WRITE) = txlen;
-        REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_START_WRITE) = 1;
+        #define ETHMAC_CSR_SLOT_READ      0x00
+        #define ETHMAC_CSR_SLOT_LEN       0x04
+        #define ETHMAC_CSR_EV_STATUS      0x0C
+        #define ETHMAC_CSR_EV_PEND        0x10
+
+        memset((void*)ETHMAC_RX_BUFFER, 0, ETHMAC_TX_BUFFER - ETHMAC_RX_BUFFER);
+
+        CRITICAL("ETHMAC SLOT READ: %d", REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_SLOT_READ));
+        CRITICAL("ETHMAC SLOT LEN:  %d", REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_SLOT_LEN));
+        CRITICAL("ETHMAC EV STATUS: %d", REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_EV_STATUS));
+
+        REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_EV_PEND) = 1;
+
+        while (!REGW(ETHMAC_CSR_BASE, ETHMAC_CSR_EV_PEND));
+
+        SUCCESS("RECV");
+
+        struct ethernet_frame *rx = (void*)ETHMAC_RX_BUFFER;
+        char *buf = (void*)ETHMAC_RX_BUFFER + sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct udp_header);
+        for (int i = 0; i < 150; i += sizeof(int)) {
+            CRITICAL("BYTE %d: %x", i, ((unsigned int volatile*)rx)[i]);
+        }
     }
 
 }
