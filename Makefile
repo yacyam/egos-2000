@@ -2,7 +2,7 @@
 # All rights reserved.
 
 # BOARD can be a7_35t or a7_100t
-BOARD       = a7_35t
+BOARD       = a7_100t
 QEMU        = qemu-system-riscv32
 
 # GNU toolchain binaries from SiFive

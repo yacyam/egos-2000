@@ -8,6 +8,7 @@
     .global boot_loader, boot_lock, kernel_lock
 
 boot_loader:
+    .word(0x500F)
     la t0, boot_lock          /* Load the address of boot_lock */
     li t1, 1
     amoswap.w.aq t1, t1, (t0) /* Acquire boot_lock */
